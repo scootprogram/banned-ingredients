@@ -2,3 +2,5 @@ __pycache__/
 *.db-journal
 *.db-wal
 *.db-shm
+data/raw/
+data/products.db

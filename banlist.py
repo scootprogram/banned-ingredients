@@ -28,8 +28,25 @@ TRACE_RE = re.compile(r"\b(may contain|may also contain|traces? of|made in a fac
 NEGATIONS = {"no", "non", "without", "zero"}
 # Packaging/material words that say nothing about what the thing is made of.
 FILLER_WORDS = {"recyclable", "recycled", "fsc", "certified", "eco", "sustainable", "sustainably", "sourced",
-                "100", "percent", "pure", "natural", "organic", "new", "the", "a", "of", "with", "en"}
+                "100", "percent", "pure", "natural", "organic", "new", "the", "a", "of", "with", "en",
+                "recyclable", "recyclables", "recycle", "recyclage", "recyclabel", "recycelbar", "recyclebar",
+                "reciclable", "riciclabile", "de", "en", "et", "und", "y", "e", "di", "da", "van", "het"}
 NO_PACKAGING = {"none", "no packaging", "unpackaged", "loose", "bulk", "package free", "packaging free"}
+
+# Packaging completeness rules: a part list can name only safe materials and still not
+# prove the product is plastic-free.
+# 1. A container listed without its closure: the closure (cap, lid, pump) is usually plastic
+#    or plastic-lined, so it must be listed and pass on its own.
+CONTAINER_WORDS = {"bottle", "bottles", "jar", "jars", "flacon", "flask", "jug", "carafe", "decanter",
+                   "bouteille", "bocal", "pot", "flasche", "botella", "frasco", "tarro", "bottiglia",
+                   "barattolo", "vasetto", "fles", "pot", "бутылка", "банка", "флакон"}
+CLOSURE_WORDS = {"lid", "lids", "cap", "caps", "cork", "stopper", "closure", "top", "couvercle", "bouchon",
+                 "capsule", "opercule", "deckel", "verschluss", "korken", "tapa", "tapon", "tappo", "coperchio",
+                 "capsula", "dop", "deksel", "kurk", "крышка", "пробка", "pump", "sprayer", "dropper"}
+# 2. Bare metal with no shape: for packaged goods that is nearly always a lined can or a lidded tin.
+METAL_WORDS = {"metal", "metals", "metallic", "steel", "aluminium", "aluminum", "alu", "tin", "tinplate",
+               "tin plated", "plated", "metall", "acier", "fer", "stahl", "acero", "acciaio", "alluminio",
+               "aluminio", "ferro", "blech", "metaal", "staal", "металл", "сталь", "алюминий", "жесть"}
 
 # Exit codes for `check`.
 OK, EXCLUDED, UNKNOWN = 0, 1, 2
@@ -38,11 +55,12 @@ OK, EXCLUDED, UNKNOWN = 0, 1, 2
 # ---------------------------------------------------------------- text helpers
 
 def norm(text):
-    """Lowercase, strip accents and punctuation, collapse whitespace."""
+    """Lowercase, strip accents and punctuation, collapse whitespace. Keeps letters of every
+    script (Cyrillic, Greek, CJK, ...), so non-Latin labels are matched rather than dropped."""
     text = unicodedata.normalize("NFKD", text)
     text = "".join(c for c in text if not unicodedata.combining(c))
     text = text.lower().replace("&", " and ")
-    text = re.sub(r"[^a-z0-9]+", " ", text)
+    text = re.sub(r"[\W_]+", " ", text)
     return " ".join(text.split())
 
 
@@ -389,13 +407,93 @@ class Matcher:
             if "packaging" not in given:
                 unknown.append("no packaging information")
             else:
-                unknown += [f"packaging part not identified: '{r[0]}'" for r in results["packaging"] if not r[4]]
+                parts = results["packaging"]
+                if not parts:
+                    unknown.append("packaging text has no recognizable words")
+                unknown += [f"packaging part not identified: '{r[0]}'" for r in parts if not r[4]]
+                words = [set(norm(r[0]).split()) for r in parts]
+                if any(w & CONTAINER_WORDS for w in words) and not any(w & CLOSURE_WORDS for w in words):
+                    unknown.append("container listed without its cap/lid")
+                unknown += [f"bare metal packaging '{r[0]}' (cans and tins are plastic-lined)" for r, w in
+                            zip(parts, words) if not r[2] and w - FILLER_WORDS and w - FILLER_WORDS <= METAL_WORDS]
         if needed & {"ingredients", "material"} and not given.keys() & {"ingredients", "material"}:
             unknown.append("no ingredients or materials information")
         if "material" in given and "material" in needed:
+            if not results["material"]:
+                unknown.append("material text has no recognizable words")
             unknown += [f"material not identified: '{r[0]}'" for r in results["material"] if not r[4]]
         verdict = EXCLUDED if excluded else UNKNOWN if unknown else OK
         return verdict, results, unknown
+
+
+class MemoryMatcher(Matcher):
+    """Same matching as Matcher, but loads the whole active ban list and taxonomy into memory
+    once and caches phrase results. For batch jobs (checking millions of products); the
+    one-off load takes seconds per million bans."""
+
+    def __init__(self, db):
+        super().__init__(db)
+        self.bans = {r["id"]: r for r in db.execute("SELECT * FROM banned_ingredients WHERE active = 1")}
+        self.applies = {i: set(b["applies_to"].split(",")) for i, b in self.bans.items()}
+        self.aliases = {}
+        for r in db.execute("SELECT ingredient_id, alias_norm, fields FROM aliases"):
+            if r[0] in self.bans:
+                self.aliases.setdefault(r[1], []).append((r[0], set(r[2].split(",")) if r[2] else None))
+        self.exceptions = {}
+        for r in db.execute("SELECT ingredient_id, phrase_norm FROM exceptions"):
+            self.exceptions.setdefault(r[0], []).append(r[1])
+        self.synonyms = {}
+        for kind, node_id, text in db.execute(
+                "SELECT kind, node_id, text_norm FROM taxonomy_synonyms ORDER BY lang = 'en'"):
+            self.synonyms[(kind, text)] = node_id  # English rows come last, so they win
+        self.parents = {}
+        for kind, child, parent in db.execute("SELECT kind, child_id, parent_id FROM taxonomy_parents"):
+            self.parents.setdefault((kind, child), []).append(parent)
+        self.roots = {}
+        for ban_id, kind, node_id in db.execute("SELECT ingredient_id, kind, node_id FROM ban_roots"):
+            if ban_id in self.bans:
+                self.roots.setdefault((kind, node_id), []).append(ban_id)
+        self.needed = {f for a in self.applies.values() for f in a}
+        self.ancestor_cache, self.phrase_cache = {}, {}
+
+    def required_fields(self):
+        return self.needed
+
+    def alias_hits(self, gram, field):
+        return [b for b, fields in self.aliases.get(gram, ())
+                if field in self.applies[b] and (fields is None or field in fields)]
+
+    def lookup_node(self, kind, gram):
+        return self.synonyms.get((kind, gram))
+
+    def ancestors(self, kind, node_id):
+        """-> {ancestor: min depth}, the node itself at depth 0."""
+        key = (kind, node_id)
+        if key not in self.ancestor_cache:
+            seen, frontier, depth = {node_id: 0}, [node_id], 0
+            while frontier:
+                depth += 1
+                frontier = [p for n in frontier for p in self.parents.get((kind, n), ()) if p not in seen]
+                seen.update((p, depth) for p in frontier)
+            self.ancestor_cache[key] = seen
+        return self.ancestor_cache[key]
+
+    def node_hits(self, kind, node_id, field):
+        return list({b for anc, depth in self.ancestors(kind, node_id).items()
+                     for b in self.roots.get((kind, anc), ())
+                     if field in self.applies[b] and (depth == 0 or self.bans[b]["include_children"])})
+
+    def excepted(self, ban_id, phrase_norm):
+        padded = f" {phrase_norm} "
+        return any(f" {e} " in padded for e in self.exceptions.get(ban_id, ()))
+
+    def check_phrase(self, phrase, field):
+        key = (norm(phrase), field)
+        if key not in self.phrase_cache:
+            if len(self.phrase_cache) > 2_000_000:
+                self.phrase_cache.clear()
+            self.phrase_cache[key] = super().check_phrase(phrase, field)
+        return self.phrase_cache[key]
 
 
 # ---------------------------------------------------------------- commands
@@ -410,6 +508,18 @@ def cmd_init(db, args):
 def cmd_load_taxonomy(db, args):
     counts = load_taxonomy(db)
     print("Loaded taxonomy: " + ", ".join(f"{n:,} {k} entries" for k, n in counts.items()))
+
+
+def cmd_reindex(db, args):
+    """Reload the taxonomies and re-normalize every alias and exception (after `norm` changes)."""
+    cmd_load_taxonomy(db, args)
+    changed = 0
+    for table, text_col, norm_col in (("aliases", "alias", "alias_norm"), ("exceptions", "phrase", "phrase_norm")):
+        for row_id, text, old in db.execute(f"SELECT id, {text_col}, {norm_col} FROM {table}").fetchall():
+            if norm(text) != old:
+                changed += db.execute(f"UPDATE OR IGNORE {table} SET {norm_col} = ? WHERE id = ?",
+                                      (norm(text), row_id)).rowcount
+    print(f"Re-normalized {changed} alias/exception row(s).")
 
 
 def cmd_add(db, args):
@@ -626,6 +736,9 @@ def main():
 
     s = sub.add_parser("load-taxonomy", help="reload the Open Food Facts taxonomy files")
     s.set_defaults(fn=cmd_load_taxonomy)
+
+    s = sub.add_parser("reindex", help="reload taxonomies and re-normalize aliases (after upgrading the tool)")
+    s.set_defaults(fn=cmd_reindex)
 
     s = sub.add_parser("add", help="add an entry (or add to it if the slug exists)")
     s.add_argument("slug")
