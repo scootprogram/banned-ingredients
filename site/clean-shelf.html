@@ -1,0 +1,291 @@
+<title>Clean Shelf</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single search column, like a shop's stock ledger. Results are rows, not tiles,
+   so packaging and ingredients can be read side by side. */
+:root {
+  --bg: #f3f5f2;          /* paper with a faint glass-green cast */
+  --surface: #ffffff;
+  --ink: #1b2420;
+  --muted: #5c6a63;
+  --line: #d9e0db;
+  --accent: #1f5f4a;      /* bottle-glass green */
+  --accent-ink: #ffffff;
+  --kraft: #8a6a3d;       /* kraft-paper brown for packaging chips */
+  --kraft-bg: #f1e8da;
+  --focus: #2f7d63;
+  --font-display: "Young Serif", Georgia, "Times New Roman", serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121815; --surface: #1a221e; --ink: #e4ebe6; --muted: #9aaba2; --line: #2c3833;
+    --accent: #6cc3a0; --accent-ink: #0d1a14; --kraft: #d9b47e; --kraft-bg: #2e2619; --focus: #8fd8ba;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121815; --surface: #1a221e; --ink: #e4ebe6; --muted: #9aaba2; --line: #2c3833;
+  --accent: #6cc3a0; --accent-ink: #0d1a14; --kraft: #d9b47e; --kraft-bg: #2e2619; --focus: #8fd8ba;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+}
+.wrap {
+  max-width: 880px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+header { display: flex; flex-direction: column; gap: 8px; }
+h1 {
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.01em;
+}
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+.rules { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.rules li {
+  font-size: 0.8125rem; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted); background: var(--surface);
+}
+.rules li::before { content: "no "; color: var(--accent); font-weight: 700; }
+
+.controls {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 12px; display: flex; flex-direction: column; gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--bg);
+}
+.search { position: relative; }
+.search input {
+  width: 100%; font: inherit; font-size: 1.125rem; padding: 12px 14px;
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink);
+}
+.search input:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 25%, transparent); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button {
+  font: inherit; font-size: 0.875rem; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.seg button:focus-visible, select:focus-visible, .more:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+select {
+  font: inherit; font-size: 0.875rem; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); max-width: 100%;
+}
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--muted); cursor: pointer; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.warn { font-size: 0.8125rem; color: var(--kraft); font-weight: 700; }
+.count { font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+
+#results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.item {
+  padding-block: 16px; border-bottom: 1px solid var(--line);
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 16px;
+}
+.item > * { min-width: 0; }
+.name { font-family: var(--font-display); font-size: 1.1875rem; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
+.brand { color: var(--muted); font-size: 0.9375rem; overflow-wrap: anywhere; }
+.kind {
+  grid-column: 2; grid-row: 1; align-self: start;
+  font-family: var(--font-mono); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px;
+}
+.meta { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  font-size: 0.8125rem; padding: 1px 8px; border-radius: 4px;
+  background: var(--kraft-bg); color: var(--kraft); overflow-wrap: anywhere;
+}
+.ingredients { font-size: 0.875rem; color: var(--muted); margin: 0; overflow-wrap: anywhere; }
+.ingredients b { color: var(--ink); font-weight: 700; }
+.where { font-size: 0.8125rem; color: var(--muted); }
+.code { font-family: var(--font-mono); font-size: 0.75rem; }
+.links { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9375rem; }
+.links a { color: var(--accent); font-weight: 700; text-underline-offset: 3px; }
+mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 2px; }
+
+.more {
+  font: inherit; align-self: center; margin-top: 8px; padding: 10px 20px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--accent); background: transparent; color: var(--accent); font-weight: 700;
+}
+.empty { padding: 32px 0; color: var(--muted); text-align: center; }
+details.about {
+  font-size: 0.875rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px;
+}
+details.about summary { cursor: pointer; color: var(--ink); font-weight: 700; }
+details.about p { max-width: 65ch; }
+details.about a { color: var(--accent); }
+@media (max-width: 480px) {
+  .count { margin-left: 0; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Clean Shelf</h1>
+    <p class="lede">Products with none of the ingredients below and no plastic anywhere: not in the product, not in the packaging, not in the caps, linings or labels. Each one links to an Amazon search and its full record.</p>
+    <ul class="rules" id="rules" aria-label="What's excluded"></ul>
+  </header>
+
+  <div class="controls" role="search">
+    <div class="search">
+      <label for="q" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search products</label>
+      <input id="q" type="search" placeholder="Search by name, brand, category or ingredient" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filters">
+      <div class="seg" id="kinds" role="group" aria-label="Product type"></div>
+      <select id="country" aria-label="Sold in"></select>
+      <label class="toggle" for="loose"><input type="checkbox" id="loose"> <span id="loose-label">Include items whose cap or lid isn't listed</span></label>
+      <span class="count" id="count" aria-live="polite">Loading products...</span>
+    </div>
+  </div>
+
+  <ul id="results"></ul>
+  <button class="more" id="more" hidden>Show more</button>
+
+  <details class="about">
+    <summary>How this list is made</summary>
+    <p>Every product in Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts was checked against the ban list. A product appears here only if its ingredients were checked and every packaging part listed for it is a known plastic-free material. Anything unclear, such as a bottle listed without its cap, a bare "metal" container or a "pouch", is left out.</p>
+    <p>Many glass jars and bottles are recorded as just "glass", with no lid or cap. Those lids are usually plastic-lined, so these items are hidden unless you switch them on, and they are marked when shown.</p>
+    <p>The list depends on what volunteers recorded. If a record leaves out a part of the packaging (for example the bag inside a box), the product can still appear here, so check the label before you buy.</p>
+    <p id="built"></p>
+    <p>Product data © Open Food Facts contributors, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>.</p>
+  </details>
+</div>
+
+<script>
+(() => {
+  const KIND_LABELS = { all: "All", food: "Food", beauty: "Beauty", products: "Household", petfood: "Pet food" };
+  const PAGE = 40;
+  const $ = (id) => document.getElementById(id);
+  const state = { q: "", kind: "all", country: "", loose: false, shown: PAGE };
+  let rows = [], meta = {};
+
+  const fold = (s) => (s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function highlight(text, words) {
+    let html = esc(text);
+    if (!words.length) return html;
+    // Highlight on the folded text so 'creme' finds 'crème', then map back by position.
+    const folded = fold(text);
+    const marks = [];
+    for (const w of words) {
+      let i = folded.indexOf(w);
+      while (i !== -1) { marks.push([i, i + w.length]); i = folded.indexOf(w, i + w.length); }
+    }
+    if (!marks.length) return html;
+    marks.sort((a, b) => a[0] - b[0]);
+    let out = "", pos = 0;
+    for (const [s, e] of marks) {
+      if (s < pos) continue;
+      out += esc(text.slice(pos, s)) + "<mark>" + esc(text.slice(s, e)) + "</mark>";
+      pos = e;
+    }
+    return out + esc(text.slice(pos));
+  }
+
+  function amazonUrl(r) {
+    const q = [(r.b || "").split(",")[0].trim(), r.n].filter(Boolean).join(" ") || r.c;
+    return "https://www.amazon.com/s?k=" + encodeURIComponent(q);
+  }
+
+  function matches(r, words) {
+    if (r.x && !state.loose) return false;
+    if (state.kind !== "all" && r.s !== state.kind) return false;
+    if (state.country && !(r.w || "").split(",").includes(state.country)) return false;
+    return words.every((w) => r._hay.includes(w));
+  }
+
+  function render() {
+    const words = fold(state.q).split(/\s+/).filter(Boolean);
+    const hits = rows.filter((r) => matches(r, words));
+    if (words.length) {  // name matches first, then brand, then everything else
+      const score = (r) => words.reduce((t, w) => t + (fold(r.n).includes(w) ? 4 : fold(r.b).includes(w) ? 2 : 0), 0);
+      hits.sort((a, b) => score(b) - score(a));
+    }
+    $("count").textContent = `${hits.length.toLocaleString()} product${hits.length === 1 ? "" : "s"}`;
+    const list = hits.slice(0, state.shown);
+    $("results").innerHTML = list.length ? list.map((r) => `
+      <li class="item">
+        <h2 class="name">${highlight(r.n || "(no name)", words)}</h2>
+        <span class="kind">${esc(KIND_LABELS[r.s] || r.s)}</span>
+        <div class="brand">${highlight(r.b || "Unknown brand", words)}</div>
+        <div class="meta">
+          <div class="chips" aria-label="Packaging">${[...new Set((r.p || "").split(/[;,]/).map((x) => x.trim().replace(/^[a-z]{2}:/, "").replace(/-/g, " ").toLowerCase()).filter(Boolean))]
+            .map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>
+          ${r.x ? `<div class="warn">Cap, lid or seal not listed: check before buying</div>` : ""}
+          ${r.i ? `<p class="ingredients"><b>${r.s === "products" ? "Made of" : "Ingredients"}:</b> ${highlight(r.i, words)}</p>` : ""}
+          <div class="where">${r.w ? "Sold in " + esc(r.w.split(",").slice(0, 4).join(", ")) + (r.w.split(",").length > 4 ? "…" : "") + " · " : ""}<span class="code">${esc(r.c)}</span></div>
+          <div class="links">
+            <a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>
+            <a href="${esc(r.u)}" target="_blank" rel="noopener">Full record</a>
+          </div>
+        </div>
+      </li>`).join("")
+      : `<li class="empty">No clean products match. Try fewer words or another type.</li>`;
+    $("more").hidden = hits.length <= state.shown;
+  }
+
+  function setupFilters() {
+    const kinds = ["all", ...Object.keys(KIND_LABELS).filter((k) => k !== "all" && rows.some((r) => r.s === k))];
+    $("kinds").innerHTML = kinds.map((k) =>
+      `<button type="button" data-kind="${k}" aria-pressed="${k === state.kind}">${KIND_LABELS[k]}</button>`).join("");
+    $("kinds").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-kind]");
+      if (!b) return;
+      state.kind = b.dataset.kind; state.shown = PAGE;
+      $("kinds").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      render();
+    });
+    const counts = {};
+    rows.forEach((r) => (r.w || "").split(",").filter(Boolean).forEach((c) => (counts[c] = (counts[c] || 0) + 1)));
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 40);
+    $("country").innerHTML = `<option value="">Sold anywhere</option>` +
+      top.map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n.toLocaleString()})</option>`).join("");
+    $("country").addEventListener("change", (e) => { state.country = e.target.value; state.shown = PAGE; render(); });
+  }
+
+  let timer;
+  $("q").addEventListener("input", (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { state.q = e.target.value; state.shown = PAGE; render(); }, 120);
+  });
+  $("loose").addEventListener("change", (e) => { state.loose = e.target.checked; state.shown = PAGE; render(); });
+  $("more").addEventListener("click", () => { state.shown += PAGE; render(); });
+
+  fetch("products.json").then((r) => {
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }).then((data) => {
+    meta = data.meta; rows = data.products;
+    rows.forEach((r) => (r._hay = fold([r.n, r.b, r.g, r.i].join(" "))));
+    $("rules").innerHTML = meta.bans.map((b) => `<li>${esc(b)}</li>`).join("");
+    $("built").textContent = `Checked ${Number(meta.checked).toLocaleString()} products on ${meta.built}; ${rows.length.toLocaleString()} passed.`;
+    const loose = rows.filter((r) => r.x).length;
+    $("loose-label").textContent = `Include ${loose.toLocaleString()} items whose cap or lid isn't listed`;
+    setupFilters();
+    render();
+  }).catch(() => {
+    $("count").textContent = "";
+    $("results").innerHTML = `<li class="empty">The product list didn't load. Reload the page to try again.</li>`;
+  });
+})();
+</script>

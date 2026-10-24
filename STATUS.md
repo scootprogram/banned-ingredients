@@ -16,7 +16,19 @@ _Last updated 2026-10-24._
 - **Tests**: `python3 tests/test_banlist.py` (28 cases × 2 matchers, all passing).
 - **Trial run** on the first 20,000 rows of each export: 130 of 60,874 products passed. The pipeline works.
 
-## Next steps
+## Latest build (2026-10-24)
+- Checked 4,621,274 products:
+  - 16,739 passed
+  - 947,527 excluded
+  - 3,657,008 unknown, mostly because of missing packaging data
+- `products_clean.db` and `products_clean.csv` are committed.
+- **Shareable search page**: https://claude.ai/artifact/K9XSaVNM81cksFh63a4wQx (private until shared)
+  - Source: `site/clean-shelf.html`
+  - Data: `python3 site/export_json.py . products.json`
+  - Hides 7,584 items listed as plain "glass" with no lid or cap, or with only a protective gas. Viewers can switch them back on.
+- Suggested checker fix, not applied yet: treat bare "glass" like a container that needs its closure listed, and treat a protective gas as a sealed tray.
+
+## Next steps (original plan; steps 1-4 are done)
 1. `bash pipeline/download.sh`
    - Downloads about 1.5 GB of CSV exports.
    - Then streams the 13 GB food JSONL to extract packaging, which takes about 20 minutes.
