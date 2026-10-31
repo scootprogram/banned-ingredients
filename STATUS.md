@@ -81,10 +81,10 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
 ## Names and food filter (published 2026-10-31)
 - Products with no recorded name get one from brand + type + size, marked "name not recorded" on the page.
 - Food and drink filed as beauty is excluded (`is_food` in `pipeline/build_products.py`).
-- The page now has 416 US products: 1 with packaging verified plastic-free and 415 not verified yet.
+- Vitamins, supplements and over-the-counter medicines are **in scope** (owner's decision). `SUPPLEMENT_MARKERS` and `SUPPLEMENT_NAME_WORDS` keep them from counting as food, even as gummies or tablets.
+- The page now has 419 US products: 1 with packaging verified plastic-free and 418 not verified yet.
 - Open decisions for the owner:
-  1. Dietary supplements and over-the-counter medicines (vitamins, fish oil, melatonin, ZzzQuil, antacids; about 80 products) are currently excluded as food, via the `WEAK_FOOD` "dietary supplements" category. To bring them back, drop that category and rebuild.
-  2. A redesign with features the owner likes from another site (nontoxiclab.com). Build the site's own version; don't copy that site's text, design or branding.
+  1. A redesign with features the owner likes from another site (nontoxiclab.com). Build the site's own version; don't copy that site's text, design or branding.
 
 ## US only (2026-10-31)
 - The site only shows products recorded as sold in the United States, because it sells through amazon.com. The filter is in `site/export_json.py`. `products_clean.*` still holds the worldwide list (3,915).

@@ -50,11 +50,23 @@ STRONG_FOOD = {"bottled water", "sports drink", "sports drinks", "sodas", "carbo
 # product as beauty or household.
 WEAK_FOOD = {"plant based foods and beverages", "plant based foods", "fats", "vegetable fats", "vegetable oils",
              "beverages", "beverages and beverages preparations", "beverage preparations", "plant based beverages",
-             "snacks", "sweet snacks", "confectioneries", "dietary supplements", "dairies", "fermented foods",
+             "snacks", "sweet snacks", "confectioneries", "dairies", "fermented foods",
              "mushrooms", "nuts and their products", "dried products", "coconut oils", "cocoa butter", "foods"}
 BEAUTY_MARKERS = {"cosmetic products", "open beauty facts", "non food products", "hair care", "lip gloss",
                   "skin care", "body care", "body", "health beauty", "personal care", "hygiene", "shampoos",
                   "soaps", "body oils", "face", "lotion", "creams"}
+# Vitamins, supplements and over-the-counter medicines are in scope (owner's decision, 2026-10-31),
+# even as gummies or tablets that carry food categories.
+SUPPLEMENT_MARKERS = {"dietary supplements", "dietary supplement", "supplements", "supplement", "vitamins", "vitamin",
+                      "vitamin supplement", "vitamins supplements", "herbal supplement", "health care", "medicine",
+                      "medicines", "medications", "medication", "over the counter", "pharmacy", "otc", "sleep aids",
+                      "pain relievers", "antacids", "cold flu", "health"}
+SUPPLEMENT_NAME_WORDS = {"vitamin", "vitamins", "multivitamin", "supplement", "supplements", "omega", "omegas",
+                         "melatonin", "magnesium", "zinc", "collagen", "biotin", "probiotic", "probiotics", "prenatal",
+                         "gummies", "gummy", "tablets", "tablet", "capsules", "caplets", "softgels", "antacid",
+                         "zzzquil", "nyquil", "dayquil", "tylenol", "advil", "ibuprofen", "acetaminophen", "elderberry",
+                         "sambucus", "ashwagandha", "creatine", "cbd", "tincture", "extract", "drops", "complex",
+                         "greens", "turkesterone", "omegagenics", "fiber", "sleep", "relief", "aloe"}
 BEAUTY_NAME_WORDS = {"body", "hair", "lip", "lips", "skin", "lotion", "shampoo", "conditioner", "soap", "deodorant",
                      "balm", "cream", "serum", "face", "facial", "massage", "bath", "cleanser", "toothpaste"}
 # Unknown reasons that are NOT about packaging: products with these aren't known to be clean.
@@ -175,6 +187,9 @@ def init_worker():
 
 def is_food(p):
     cats = {banlist.norm(c) for c in p["categories_en"].split(",")}
+    name_words = set(banlist.norm(p["product_name"]).split())
+    if cats & SUPPLEMENT_MARKERS or name_words & SUPPLEMENT_NAME_WORDS or {"fish", "oil"} <= name_words:
+        return False  # vitamins, supplements and OTC medicines are in scope
     if cats & STRONG_FOOD:
         return True
     beauty = cats & BEAUTY_MARKERS or set(banlist.norm(p["product_name"]).split()) & BEAUTY_NAME_WORDS
