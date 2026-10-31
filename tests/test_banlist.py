@@ -39,6 +39,48 @@ CASES = [
     ("Рис", "картон", None, "OK"),
     ("Rice", "glass jar", None, "UNKNOWN"),                                      # jar without its lid
     ("Beans", "metal", None, "UNKNOWN"),                                         # bare metal = can?
+    ("Jam", "glass", None, "UNKNOWN"),                                           # glass jar, lid not listed
+    ("Jam", "glass; glass", None, "UNKNOWN"),
+    ("Cumin", "glass vial; glass", None, "UNKNOWN"),
+    ("Jam", "glass jar, glass lid", None, "OK"),
+    ("Wine", "verre, bouchon en liège", None, "OK"),                             # French: glass, cork
+    ("Salmon", "protective gas", None, "UNKNOWN"),                               # sealed tray, not listed
+    ("Salmon", "en:protective-gas, en:cardboard", None, "UNKNOWN"),               # cardboard holds no gas
+    ("Mayonesa", "en:cristal", None, "UNKNOWN"),                                 # Spanish glass, no lid
+    ("Mushrooms", "pl:szkło", None, "UNKNOWN"),                                  # Polish glass, no lid
+    ("Pâtée", "Jetez les emballages metal dans le bac de tri", None, "UNKNOWN"),  # metal in free text
+    ("Drink", "de:fsc", None, "UNKNOWN"),                                        # a label, not a material
+    ("Chocolate", "aluminium foil, paper", None, "OK"),                          # plain foil is fine
+    ("Fruit juice", "Recycled as food- & beverage-karton", None, "EXCLUDED"),    # liquid carton by name
+]
+
+# With product context: (ingredients, packaging, name, categories, expected verdict)
+CONTEXT_CASES = [
+    ("Orange juice", "paperboard packet", "Orangensaft", "Beverages, Juices, Orange juices", "UNKNOWN"),
+    ("Water, oats, sunflower oil", "cardboard", "Oat Milk", "Plant-based milks", "UNKNOWN"),
+    ("Pea purée, salt", "paper", "Pea cream soup", "Soups, Dried soups", "OK"),       # dry soup mix
+    ("Potatoes, sunflower oil", "cardboard box", "Long Frites", "Frozen foods, Fries", "UNKNOWN"),
+    ("Tuna, olive oil", "cardboard", "Thon entier", "Seafood, Canned fish", "UNKNOWN"),
+    ("Green tea", "cardboard sleeve", "Thé vert 25 sachets", "Teas", "UNKNOWN"),
+    ("Rice", "cardboard, paperboard", "Kochbeutel Reis", "Rice", "UNKNOWN"),          # boil-in-bag
+    ("Green tea", "paper bag", "Thé vert en vrac", "Teas, Green teas", "OK"),
+    ("Red wine, sulfites", "glass bottle, cork", "Haut Médoc", "Beverages, Wines", "OK"),
+    ("Pomme 99,9%", "cardboard sleeve", "Compote", "Plant-based foods, Desserts, Compotes", "UNKNOWN"),
+    ("Viande bovine", "cardboard sleeve", "4 Steaks hachés", "Meats and their products, Beef", "UNKNOWN"),
+    ("Eau, jus de fruits", "cardboard", "Boisson orange - 10 x 20 cl", "Beverages and beverages preparations",
+     "UNKNOWN"),                                                                 # volume in the name
+    ("Water, tomatoes, salt", "paper", "Tomato soup", "", "UNKNOWN"),          # water first
+    ("Glucose, probiotic cultures", "cardboard", "Tribiolac", "Dietary supplements", "UNKNOWN"),
+    ("Eggs", "cardboard egg carton", "12 Large Eggs", "Farming products, Eggs, Chicken eggs", "OK"),
+    ("Black tea", "paper bag", "Ceylon", "Beverages and beverages preparations, Teas", "OK"),
+    ("Kiwi", "cardboard tray", "Kiwi Hayward", "Plant-based foods, Fruits, Fresh fruits", "OK"),
+    ("Whole oats, sugar", "cardboard", "Multi Grain Cheerios", "Cereals, Breakfast cereals", "UNKNOWN"),
+    ("Viande de porc (91%)", "cardboard", "Le pâté Hénaff", "", "UNKNOWN"),     # meat first, no category
+    ("Tomater, salt", "paper", "Passerade tomater", "Tomatoes and their products", "UNKNOWN"),
+    ("Sun-dried tomatoes", "paper bag", "Tomates séchées", "Tomatoes and their products, Dried tomatoes", "OK"),
+    ("Chickpea flour", "cardboard", "Chickpea fusilli", "Pastas, Chickpea pasta", "OK"),
+    ("Nuez moscada", "fr:vidre", "Nuez moscada molida", "Spices", "UNKNOWN"),     # Catalan glass, no lid
+    ("Fruits, sucre", "cardboard", "Fruit ice", "fr:Glace aux fruits", "UNKNOWN"),
 ]
 NAMES = {banlist.OK: "OK", banlist.EXCLUDED: "EXCLUDED", banlist.UNKNOWN: "UNKNOWN"}
 
@@ -53,7 +95,13 @@ def main():
                 failures += 1
                 print(f"FAIL [{type(matcher).__name__}] {(ingredients, packaging, material)}: "
                       f"got {NAMES[verdict]}, want {want} {reasons}")
-    total = 2 * len(CASES)
+        for ingredients, packaging, name, categories, want in CONTEXT_CASES:
+            verdict, _, reasons = matcher.check(ingredients, packaging, None, name, categories)
+            if NAMES[verdict] != want:
+                failures += 1
+                print(f"FAIL [{type(matcher).__name__}] {(name, packaging, categories)}: "
+                      f"got {NAMES[verdict]}, want {want} {reasons}")
+    total = 2 * (len(CASES) + len(CONTEXT_CASES))
     print(f"{total - failures}/{total} passed")
     sys.exit(1 if failures else 0)
 

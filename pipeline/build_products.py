@@ -44,12 +44,29 @@ def tag_names(tags):
     return [t[3:].replace("-", " ") for t in tags.split(",") if t.startswith("en:")]
 
 
+DAIRY_CATEGORIES = ["dairies", "dairy", "cheeses", "cheese", "butters", "butter", "yogurts", "yoghurts", "milks",
+                    "creams", "fermented milk products", "milk desserts"]
+NOT_DAIRY = ["plant based", "substitute", "substitutes", "non dairy", "dairy free", "vegan", "vegetable", "nut butters",
+             "peanut butters", "cocoa butter", "shea butter", "coconut milks", "almond milks", "oat milks",
+             "soy milks", "rice milks"]
+
+
+def dairy_from_categories(p):
+    """True when the category says dairy (cheese, butter, yogurt...) even if the ingredient text
+    is missing or garbled, e.g. a cheese whose 'ingredients' field holds the nutrition table."""
+    cats = f" {banlist.norm(p['categories_en'])} "
+    has = lambda terms: any(f" {banlist.norm(t)} " in cats for t in terms)
+    return has(DAIRY_CATEGORIES) and not has(NOT_DAIRY)
+
+
 def ingredients_text(p):
     """Original label text plus Open Food Facts' English tags, so non-English labels still match.
 
     English tags and allergens go first and traces last, because everything after a
     'may contain' marker only counts for traces-strict bans."""
     parts = tag_names(p["ingredients_tags"]) + [a for a in p["allergens_en"].split(",") if a.strip()]
+    if dairy_from_categories(p):
+        parts.append("dairy")
     text = ", ".join(parts + ([p["ingredients_text"]] if p["ingredients_text"].strip() else []))
     if p["traces_en"].strip():
         text += ". May contain: " + p["traces_en"]
@@ -120,9 +137,11 @@ def check(item):
     if source == "products":
         # Open Products Facts (durable goods) uses the ingredients field for what the item is
         # made of, e.g. 'Edelstahl'. Checking it as material means each part must be a known material.
-        verdict, results, unknown = _matcher.check(None, packaging, p["ingredients_text"])
+        verdict, results, unknown = _matcher.check(None, packaging, p["ingredients_text"],
+                                                   p["product_name"], p["categories_en"])
     else:
-        verdict, results, unknown = _matcher.check(ingredients_text(p), packaging, None)
+        verdict, results, unknown = _matcher.check(ingredients_text(p), packaging, None,
+                                                   p["product_name"], p["categories_en"])
     banned = sorted({_matcher.ban(b)["slug"] for rows in results.values() for r in rows for b in r[2]})
     return (p["code"], source, p["product_name"], p["brands"], p["categories_en"], p["countries_en"],
             p["ingredients_text"], packaging, VERDICT_NAMES[verdict], ",".join(banned), "; ".join(unknown),

@@ -43,10 +43,63 @@ CONTAINER_WORDS = {"bottle", "bottles", "jar", "jars", "flacon", "flask", "jug",
 CLOSURE_WORDS = {"lid", "lids", "cap", "caps", "cork", "stopper", "closure", "top", "couvercle", "bouchon",
                  "capsule", "opercule", "deckel", "verschluss", "korken", "tapa", "tapon", "tappo", "coperchio",
                  "capsula", "dop", "deksel", "kurk", "крышка", "пробка", "pump", "sprayer", "dropper"}
-# 2. Bare metal with no shape: for packaged goods that is nearly always a lined can or a lidded tin.
+# Glass packaging with no shape ('glass', 'clear glass') is nearly always a jar or bottle, so it
+# counts as a container too. A 'glass lid' names its own closure and passes.
+GLASS_WORDS = {"glass", "vial", "vials", "verre", "glas", "vidrio", "vetro", "vidro", "vidre", "szklo", "szkło", "cristal",
+               "sticla", "sklo", "staklo", "steklo", "uveg", "lasi", "glasflasche", "glasflaschen", "стекло",
+               "стъкло", "скло"}
+# 3. A protective gas fills a sealed, gas-tight pack (usually a plastic tray or film). Unless a
+#    glass or metal container is listed to hold it, that pack is missing from the list.
+GAS_WORDS = {"protective", "gas", "gases", "atmosphere", "modified", "nitrogen", "azote", "n2", "co2", "carbon",
+             "dioxide", "inert", "argon", "gaz", "protecteur", "schutzgas", "schutzatmosphare", "atmosfera",
+             "protettiva", "protectora"}
+# 2. Metal packaging other than plain foil: cans, tins, trays and lids are nearly always
+#    plastic-lined or lacquered, whatever the record calls them.
 METAL_WORDS = {"metal", "metals", "metallic", "steel", "aluminium", "aluminum", "alu", "tin", "tinplate",
                "tin plated", "plated", "metall", "acier", "fer", "stahl", "acero", "acciaio", "alluminio",
                "aluminio", "ferro", "blech", "metaal", "staal", "металл", "сталь", "алюминий", "жесть"}
+FOIL_WORDS = {"foil", "foils", "folie", "feuille", "papier", "paper"}
+
+# Product context rules (need the product's name and categories, see Matcher.check).
+# 4. Liquids and wet or fresh foods can't sit in plain paper or cardboard: there is a lined
+#    carton, tray, pot, pouch or blister inside that the record doesn't list.
+LIQUID_CATEGORIES = ["fruit based beverages", "juice drinks", "sweetened beverages", "unsweetened beverages",
+                     "artificially sweetened beverages", "non alcoholic beverages", "alcoholic beverages",
+                     "carbonated", "fruit juices",
+                     "meats", "fishes", "seafood", "meals", "prepared meals", "terrines", "pates", "rillettes",
+                     "compotes", "fruit purees", "apple sauces", "baby foods", "cheeses", "yogurts",
+                     "dairy desserts", "sausages", "hams", "poultries", "dietary supplements",
+                     "food supplements", "vitamins", "tomato purees", "tomato sauces", "crushed tomatoes",
+                     "tomatoes and their products",
+                     "juices", "nectars", "milks", "waters", "soups", "broths", "sodas", "smoothies",
+                     "soft drinks", "carbonated drinks", "plant based milks", "milk substitutes", "wines", "beers",
+                     "ciders", "kombucha", "iced teas", "lemonades", "cooking creams", "creams", "drinkable",
+                     "sauces", "passata", "coconut milks", "liquid", "syrups", "vinegars", "oils"]
+DRY_CATEGORIES = ["dried", "dehydrated", "powder", "powders", "instant", "mixes", "cubes", "granulated", "flakes"]
+# 5. Frozen-food boxes are plastic-coated or hold an inner bag; canned food means a lined can.
+FROZEN_CATEGORIES = ["frozen", "surgeles", "tiefkuhl", "congelados", "surgelati", "ice creams", "ice cream",
+                     "sorbets", "glace", "glaces", "glace aux fruits", "smoothie bowl", "smoothie bowls"]
+CANNED_CATEGORIES = ["canned", "tinned", "conserves", "preserves in cans"]
+# A volume in the name ('10 x 20 cl', '1 L', '330 ml') or water as the first ingredient also
+# marks a liquid.
+VOLUME_RE = re.compile(r"\b\d+(?:[.,]\d+)?\s?(?:ml|cl|dl|l|lt|ltr|litre|litres|liter|liters|fl oz)\b", re.I)
+WATER_WORDS = {"water", "eau", "wasser", "agua", "acqua", "woda", "вода", "aqua", "vann", "vatten", "vesi"}
+# ...as does meat or fish as the first ingredient (a pâté or fish with no category is usually canned).
+MEAT_FISH_WORDS = {"meat", "viande", "fleisch", "carne", "pork", "porc", "schwein", "beef", "boeuf", "rind",
+                   "chicken", "poulet", "huhn", "pollo", "turkey", "dinde", "duck", "canard", "lamb", "agneau",
+                   "fish", "poisson", "fisch", "pescado", "pesce", "tuna", "thon", "thunfisch", "atun", "tonno",
+                   "salmon", "saumon", "lachs", "sardine", "sardines", "mackerel", "maquereau", "makrele"}
+# 5b. Products that nearly always come in an inner bag or wrapper inside the box.
+INNER_BAG_CATEGORIES = ["breakfast cereals", "biscuits", "cookies", "crackers", "puffed cereal cakes", "rice cakes",
+                        "cereal cakes", "crisps", "chips", "cereal bars", "snacks", "confectioneries", "candies",
+                        "cake mixes", "dessert mixes", "pastry helpers"]
+# 6. Names (or categories) that announce packaging parts the record leaves out (tea bags,
+#    capsules, pouches).
+NAME_HINTS = ["sachet", "sachets", "capsule", "capsules", "capsulas", "kapseln", "pods", "pod", "k cup", "k cups",
+              "gourde", "gourdes", "pouch", "pouches", "doypack", "kochbeutel", "boil in bag", "teebeutel",
+              "aufgussbeutel", "bolsitas", "bustine", "filtri", "infusettes", "tea bags", "teabags", "tea bag",
+              "teabag", "spray", "tube", "tubes", "stick pack", "portions", "squeeze", "coffee capsules",
+              "coffee pods"]
 
 # Exit codes for `check`.
 OK, EXCLUDED, UNKNOWN = 0, 1, 2
@@ -395,8 +448,36 @@ class Matcher:
                 results.append((phrase, nodes, hits, is_trace, identified))
         return results
 
-    def check(self, ingredients=None, packaging=None, material=None):
-        """-> (verdict, {field: results}, [reasons the verdict is unknown])."""
+    @staticmethod
+    def context_reasons(packaging_words, name, categories, ingredients=None):
+        """Packaging gaps revealed by the product's name, categories and ingredients (rules 4-6 above)."""
+        has = lambda text, terms: [t for t in terms if f" {norm(t)} " in text]
+        cats = f" {norm(categories or '')} "
+        reasons = []
+        holds_it = any(w & (CONTAINER_WORDS | GLASS_WORDS | METAL_WORDS) for w in packaging_words)
+        first = norm(split_list(ingredients)[0]).split() if ingredients and split_list(ingredients) else []
+        needs_inner = ((has(cats, LIQUID_CATEGORIES) and not has(cats, DRY_CATEGORIES))
+                       or VOLUME_RE.search(name or "") or (first and first[0] in WATER_WORDS | MEAT_FISH_WORDS))
+        if needs_inner and not holds_it:
+            reasons.append("liquid, wet or fresh product in paper or cardboard (the inner carton, tray, "
+                           "pot or blister isn't listed)")
+        if has(cats, INNER_BAG_CATEGORIES) and not holds_it:
+            reasons.append("this kind of product nearly always has an inner bag or wrapper, which isn't listed")
+        if has(cats, FROZEN_CATEGORIES):
+            reasons.append("frozen food (frozen-food boxes are plastic-coated or hold an inner bag)")
+        if has(cats, CANNED_CATEGORIES):
+            reasons.append("canned food (the can is plastic-lined)")
+        hints = has(f" {norm(name or '')} ", NAME_HINTS) or has(cats, NAME_HINTS)
+        if hints:
+            reasons.append(f"name mentions '{hints[0]}', which the packaging list leaves out")
+        return reasons
+
+    def check(self, ingredients=None, packaging=None, material=None, name=None, categories=None):
+        """-> (verdict, {field: results}, [reasons the verdict is unknown]).
+
+        `name` and `categories` are optional product context. They are never matched against
+        the ban list; they only let the packaging rules see what the packaging data leaves out
+        (a juice in 'cardboard' is a lined carton, '25 sachets' means tea bags)."""
         given = {f: t for f, t in (("ingredients", ingredients), ("packaging", packaging), ("material", material))
                  if t and t.strip()}
         results = {f: self.check_field(t, f) for f, t in given.items()}
@@ -412,10 +493,19 @@ class Matcher:
                     unknown.append("packaging text has no recognizable words")
                 unknown += [f"packaging part not identified: '{r[0]}'" for r in parts if not r[4]]
                 words = [set(norm(r[0]).split()) for r in parts]
-                if any(w & CONTAINER_WORDS for w in words) and not any(w & CLOSURE_WORDS for w in words):
+                if (any(w & (CONTAINER_WORDS | GLASS_WORDS) for w in words)
+                        and not any(w & CLOSURE_WORDS for w in words)):
                     unknown.append("container listed without its cap/lid")
-                unknown += [f"bare metal packaging '{r[0]}' (cans and tins are plastic-lined)" for r, w in
-                            zip(parts, words) if not r[2] and w - FILLER_WORDS and w - FILLER_WORDS <= METAL_WORDS]
+                gas_tight = CONTAINER_WORDS | GLASS_WORDS | METAL_WORDS
+                if any(w - FILLER_WORDS and w - FILLER_WORDS <= GAS_WORDS for w in words) and \
+                        not any(w & gas_tight for w in words):
+                    unknown.append("protective gas listed without the sealed container that holds it")
+                unknown += [f"metal packaging '{r[0]}' (cans, tins, trays and lids are plastic-lined)"
+                            for r, w in zip(parts, words) if not r[2] and w & METAL_WORDS and not w & FOIL_WORDS]
+                if parts and all(w <= FILLER_WORDS for w in words) and \
+                        not any(norm(r[0]) in NO_PACKAGING for r in parts):
+                    unknown.append("packaging names no material")
+                unknown += self.context_reasons(words, name, categories, ingredients)
         if needed & {"ingredients", "material"} and not given.keys() & {"ingredients", "material"}:
             unknown.append("no ingredients or materials information")
         if "material" in given and "material" in needed:
@@ -651,7 +741,8 @@ def cmd_check(db, args):
     read = lambda t: sys.stdin.read() if t == "-" else t
     matcher = Matcher(db)
     verdict, results, unknown = matcher.check(read(args.ingredients or args.text or ""),
-                                              read(args.packaging or ""), read(args.material or ""))
+                                              read(args.packaging or ""), read(args.material or ""),
+                                              args.name, args.categories)
     banned = {}
     for field, rows in results.items():
         print(f"{field}:")
@@ -812,6 +903,8 @@ def main():
     s.add_argument("--ingredients")
     s.add_argument("--packaging", help="e.g. 'glass jar, metal lid, paper label'")
     s.add_argument("--material", help="what the product itself is made of, e.g. '100%% cotton'")
+    s.add_argument("--name", help="product name, used only to spot unlisted packaging ('25 sachets')")
+    s.add_argument("--categories", help="product categories, e.g. 'Beverages, Juices' (spots lined cartons)")
     s.add_argument("-v", "--verbose", action="store_true", help="also show parts that passed")
     s.set_defaults(fn=cmd_check)
 

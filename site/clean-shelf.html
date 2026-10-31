@@ -162,8 +162,14 @@ details.about a { color: var(--accent); }
 
   <details class="about">
     <summary>How this list is made</summary>
-    <p>Every product in Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts was checked against the ban list. A product appears here only if its ingredients were checked and every packaging part listed for it is a known plastic-free material. Anything unclear, such as a bottle listed without its cap, a bare "metal" container or a "pouch", is left out.</p>
-    <p>Many glass jars and bottles are recorded as just "glass", with no lid or cap. Those lids are usually plastic-lined, so these items are hidden unless you switch them on, and they are marked when shown.</p>
+    <p>Every product in Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts was checked against the ban list. A product appears here only if its ingredients were checked and every packaging part listed for it is a known plastic-free material. Anything unclear is left out, for example:</p>
+    <ul>
+      <li>a jar or bottle listed without its lid or cap (lids are usually plastic-lined)</li>
+      <li>metal cans, tins and trays, which are lined or lacquered with plastic</li>
+      <li>drinks, wet foods and fresh meat or fish listed only as "paper" or "cardboard", since the inner carton, tray or pot isn't listed</li>
+      <li>cereals, biscuits, snacks and sweets in a box, which nearly always have an inner bag or wrapper</li>
+      <li>frozen and canned food, and anything named as tea bags, capsules, sachets or pouches</li>
+    </ul>
     <p>The list depends on what volunteers recorded. If a record leaves out a part of the packaging (for example the bag inside a box), the product can still appear here, so check the label before you buy.</p>
     <p id="built"></p>
     <p>Product data © Open Food Facts contributors, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>.</p>
@@ -281,6 +287,7 @@ details.about a { color: var(--accent); }
     $("built").textContent = `Checked ${Number(meta.checked).toLocaleString()} products on ${meta.built}; ${rows.length.toLocaleString()} passed.`;
     const loose = rows.filter((r) => r.x).length;
     $("loose-label").textContent = `Include ${loose.toLocaleString()} items whose cap or lid isn't listed`;
+    $("loose").closest("label").hidden = loose === 0;
     setupFilters();
     render();
   }).catch(() => {
