@@ -65,6 +65,11 @@ CASES = [
     ("Ethyl acetate, trimellitic anhydride copolyrmer", "glass jar, glass lid", None, "EXCLUDED"),  # misspelled
     ("Alcool, Hansaplast", "glass jar, glass lid", None, "OK"),                   # a brand, not a material
     ("Shampoo, ohne Plastik", "glass jar, glass lid", None, "OK"),                # German "without plastic"
+    ("Shea (Butyrospermum Parkii) Butter, Cocoa (Theobroma Cacao) Seed Butter", "glass jar, glass lid", None, "OK"),  # plant butters
+    ("Aqua, Sodium Cocoyl Glutamate, Tetrasodium Glutamate Diacetate", "glass jar, glass lid", None, "OK"),  # not MSG
+    ("Aqua, Monosodium Glutamate", "glass jar, glass lid", None, "EXCLUDED"),     # real MSG still caught
+    ("Aqua, Hydrolyzed Milk Protein", "glass jar, glass lid", None, "EXCLUDED"),  # real dairy still caught
+    ("Crème colorante, aqua", "glass jar, glass lid", None, "OK"),               # cosmetic cream, not dairy
     ("Мыло", "бумага", "пластик", "EXCLUDED"),                                   # Russian "plastic"
 ]
 

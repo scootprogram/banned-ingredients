@@ -2,6 +2,17 @@
 
 _Last updated 2026-10-24._
 
+## False matches fixed (2026-10-31)
+- About 3,200 products were wrongly excluded. On the US page this is 56 products, mostly toothpastes and lotions (419 to 475).
+  - "…glutamate" surfactants and chelators (sodium cocoyl glutamate, tetrasodium glutamate diacetate) were read as MSG. Fixed with exceptions on `msg`; real MSG and "sodium glutamate" are still caught.
+  - Plant butters were read as dairy. "Shea (Butyrospermum Parkii) Butter" was split at the brackets into a lone "butter". `split_list` now keeps "shea butter" together, and `milk` has exceptions for plant butters, "crème" (cosmetic cream) and "fil".
+  - Real dairy (milk protein, goat/donkey milk, lactose, whey, yogurt powder, "sine adipe lac") is still banned.
+- US searches now: toothpaste 36, soap 46, shampoo 32, deodorant 23, mouthwash 17, conditioner 11, lotion 14, sunscreen 8.
+- **Household is still 1 product (a hat), and this is missing data, not a bug.**
+  - 926 of 1,318 US Open Products Facts records list no materials at all.
+  - Many aren't household goods (cigarettes, gift cards, drinks).
+  - Growing household needs another source: see "Curated products" under ideas.
+
 ## Verified Amazon links (2026-10-31)
 - **Registry:** `data/amazon_links.csv` maps barcode to exact Amazon product ID (ASIN), with source (`manual` or `api`), date checked and a note.
   - A product in it gets a single **"View on Amazon ✓"** button to `amazon.com/dp/<ASIN>?tag=cleanshelf01-20`.
@@ -158,6 +169,7 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
   2. Rebuild the website and republish the Claude page.
 
 ## Ideas not started yet
+- **Curated products** (proposed 2026-10-31): a hand-maintained list (`data/curated_products.csv`) for items open databases don't cover, mainly household goods like glass water bottles and stainless steel containers. Each row holds name, brand, barcode, materials or ingredients, packaging and the Amazon ASIN, and is checked by the same checker as everything else. It also feeds the GLASS / STAINLESS STEEL material labels.
 - A personal verification list (products you've checked yourself) that overrides the database.
 - A monthly automatic rebuild that updates the page.
 - A "report a problem" button on the page.

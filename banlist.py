@@ -130,6 +130,12 @@ def split_list(text):
     'Flour (wheat, malt), sugar, Red No. 40' -> ['flour', 'wheat', 'malt', 'sugar', 'red no. 40'].
     """
     text = re.sub(r"\b[a-z]{2}:(?=[a-z])", "", text.lower())  # Open Food Facts tags like 'en:glass'
+    # Cosmetic labels write "Shea (Butyrospermum Parkii) Butter". Splitting at the brackets would
+    # leave a lone "butter" (read as dairy) or "oil", so move the Latin name after the whole name:
+    # "shea butter (butyrospermum parkii)".
+    text = re.sub(r"([^,;()]+?)\s*\(([^()]*)\)\s*(seed butter|kernel butter|butter|seed oil|kernel oil|fruit oil|"
+                  r"leaf oil|oil|extract|wax|juice|water|powder|flower|leaf|seed|root)\b",
+                  r"\1 \3 (\2)", text)
     parts = re.split(r"[,;:()\[\]{}/+]|\.(?!\s*\d)|\band\b|\bor\b", text)
     return [p.strip() for p in parts if norm(p)]
 
