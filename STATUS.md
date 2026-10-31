@@ -86,7 +86,7 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
 - Built from this repo with `python3 site/build_website.py ../scootprogram.github.io`, then commit and push in that repo.
 - This is the site entered for the Amazon Associates application. Amazon rejected the claude.ai link because it isn't a site the owner controls.
 - The page shows Amazon's required disclosure: "As an Amazon Associate I earn from qualifying purchases."
-- When the Associates tracking ID arrives (e.g. `cleanshelf-20`):
+- Associates tracking ID: `cleanshelf01-20`, set as `AMAZON_TAG` in `site/clean-shelf.html`. To change it:
   1. Set `AMAZON_TAG` in `site/clean-shelf.html`.
   2. Rebuild the website and republish the Claude page.
 
