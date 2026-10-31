@@ -13,7 +13,7 @@ _Last updated 2026-10-24._
   - `pipeline/download.sh` downloads the data.
   - `pipeline/build_products.py` checks every product against the ban list.
   - `search.py` searches the clean products.
-- **Tests**: `python3 tests/test_banlist.py` (28 cases × 2 matchers, all passing).
+- **Tests**: `python3 tests/test_banlist.py` (130 checks across both matchers, all passing).
 - **Trial run** on the first 20,000 rows of each export: 130 of 60,874 products passed. The pipeline works.
 
 ## Scope: beauty and household only (since 2026-10-31)
@@ -76,11 +76,20 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
    - Copy `data/needs_packaging.json` as `needs.json`.
    - Publish `site/clean-shelf.html` with both files to the same link.
 
+## Amazon links (2026-10-31)
+- Products with a real retail barcode (UPC/EAN, not a store code starting with 2) now link to an **Amazon search by barcode**, which often lands on the exact item. An "Amazon by name" link sits next to it as a fallback.
+- Products without a usable barcode keep the name search.
+- This is done on the page itself, in `amazonLinks` in `site/clean-shelf.html`.
+
 ## Ideas not started yet
-- A personal verification list (products you've checked yourself) that overrides Open Food Facts.
+- A personal verification list (products you've checked yourself) that overrides the database.
 - A monthly automatic rebuild that updates the page.
 - A "report a problem" button on the page.
-- Exact Amazon product links (needs an Amazon Associates account).
+- Exact Amazon product links. This needs the owner to:
+  1. Open an Amazon Associates account. Approval requires 3 qualifying sales within 180 days.
+  2. Request product API access inside that account.
+
+  Then the pipeline would look up each barcode on the build side and store Amazon's product ID, so the page links straight to the product page. API keys go in environment variables, never in the repo or the page.
 
 ## Known limits
 - **OK means every packaging part that is listed is plastic-free.** If the data leaves out a part, such as the plastic bag inside a cereal box, the product can still pass.

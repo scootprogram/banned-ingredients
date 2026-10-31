@@ -242,6 +242,18 @@ details.about a { color: var(--accent); }
     return "https://www.amazon.com/s?k=" + encodeURIComponent(q);
   }
 
+  // A real retail barcode (UPC/EAN), not a store's in-house code (those start with 2).
+  const retailBarcode = (c) => /^(\d{8}|\d{12,14})$/.test(c || "") && !/^0?2/.test(c);
+
+  // Most Amazon listings carry the product's UPC, so a barcode search often lands on the exact
+  // item. The name search stays as a fallback for when it finds nothing.
+  function amazonLinks(r) {
+    const byName = `<a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Amazon by name</a>`;
+    if (!retailBarcode(r.c)) return `<a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>`;
+    const byCode = "https://www.amazon.com/s?k=" + encodeURIComponent(r.c);
+    return `<a href="${esc(byCode)}" target="_blank" rel="noopener">Find on Amazon</a>${byName}`;
+  }
+
   function matches(r, words) {
     if (state.view === "clean" && r.x && !state.loose) return false;
     if (state.kind !== "all" && r.s !== state.kind) return false;
@@ -277,7 +289,7 @@ details.about a { color: var(--accent); }
           ${r.i ? `<p class="ingredients"><b>${r.s === "products" ? "Made of" : "Ingredients"}:</b> ${highlight(r.i, words)}</p>` : ""}
           <div class="where">${r.w ? "Sold in " + esc(r.w.split(",").slice(0, 4).join(", ")) + (r.w.split(",").length > 4 ? "…" : "") + " · " : ""}<span class="code">${esc(r.c)}</span></div>
           <div class="links">
-            <a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>
+            ${amazonLinks(r)}
             <a href="${esc(r.u)}" target="_blank" rel="noopener">Full record</a>
           </div>
         </div>
@@ -299,7 +311,7 @@ details.about a { color: var(--accent); }
           <div class="where">${r.w ? "Sold in " + esc(r.w.split(",").slice(0, 4).join(", ")) + (r.w.split(",").length > 4 ? "…" : "") + " · " : ""}<span class="code">${esc(r.c)}</span></div>
           <div class="links">
             <a href="${esc(r.u)}" target="_blank" rel="noopener">Open record to add packaging</a>
-            <a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>
+            ${amazonLinks(r)}
           </div>
         </div>
       </li>`;
