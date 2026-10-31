@@ -5,9 +5,8 @@ The Claude page is published without a document skeleton (the host adds one); a 
 website needs its own. This wraps the same page in a full HTML document and copies the data.
 
 Usage: python3 site/build_website.py <output folder>   e.g. ../scootprogram.github.io
-Writes index.html, products.json, needs.json and .nojekyll into the folder.
+Writes index.html, products.json and .nojekyll into the folder (and removes the old needs.json).
 """
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -33,7 +32,7 @@ def main():
     (out / "index.html").write_text(html, encoding="utf-8")
     subprocess.run([sys.executable, str(ROOT / "site" / "export_json.py"), str(ROOT), str(out / "products.json")],
                    check=True)
-    shutil.copyfile(ROOT / "data" / "needs_packaging.json", out / "needs.json")
+    (out / "needs.json").unlink(missing_ok=True)  # the old "Help fill the gaps" tab's data, no longer used
     (out / ".nojekyll").write_text("")  # serve files as-is, no Jekyll processing
     print(f"website written to {out}")
 

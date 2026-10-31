@@ -4,7 +4,9 @@
 Reads the CSV exports (and the packaging TSVs made by extract_packaging.py) from data/raw/,
 and writes:
   data/products.db   every product with its verdict (large; not committed)
-  products_clean.db  only the products that passed (OK), with full-text search
+  products_clean.db  products with clean ingredients, with full-text search:
+                       verdict 'ok'      = packaging also verified plastic-free
+                       verdict 'unknown' = packaging not yet known (the only open question)
   products_clean.csv the same, for spreadsheets
 
 Usage: python3 pipeline/build_products.py [--workers 4] [--limit N]
@@ -34,6 +36,9 @@ SOURCES = [  # (source name, CSV export, packaging TSV)
 ]
 COLUMNS = ["code", "url", "product_name", "brands", "categories_en", "countries_en", "ingredients_text",
            "ingredients_tags", "allergens_en", "traces_en", "packaging_en", "image_small_url"]
+# Unknown reasons that are NOT about packaging: products with these aren't known to be clean.
+NOT_PACKAGING_REASONS = ["no ingredients or materials information", "material not identified",
+                         "material text has no recognizable words"]
 VERDICT_NAMES = {banlist.OK: "ok", banlist.EXCLUDED: "excluded", banlist.UNKNOWN: "unknown"}
 
 csv.field_size_limit(10 ** 9)
@@ -193,19 +198,26 @@ def main():
                                                      content='products', content_rowid='rowid');
         CREATE TABLE build_info (key TEXT PRIMARY KEY, value TEXT);""")
     clean.execute(f"ATTACH '{all_path}' AS src")
-    clean.execute("INSERT INTO products SELECT * FROM src.products WHERE verdict = 'ok' ORDER BY source, name")
+    # Clean ingredients: either everything passed, or the only open questions are about packaging.
+    not_packaging = " AND ".join(f"unknown_reasons NOT LIKE '%{r}%'" for r in NOT_PACKAGING_REASONS)
+    clean.execute(f"""INSERT INTO products SELECT * FROM src.products
+                      WHERE verdict = 'ok' OR (verdict = 'unknown' AND banned = '' AND {not_packaging})
+                      ORDER BY verdict = 'unknown', source, name""")
     clean.execute("INSERT INTO products_fts (rowid, name, brands, categories, ingredients) "
                   "SELECT rowid, name, brands, categories, ingredients FROM products")
     bans = [r[0] for r in sqlite3.connect(banlist.DB_PATH).execute(
         "SELECT slug FROM banned_ingredients WHERE active = 1 ORDER BY slug")]
     info = {"built_at": time.strftime("%Y-%m-%d %H:%M:%S"), "products_checked": sum(counts.values()),
-            **{f"verdict_{k}": v for k, v in counts.items()}, "active_bans": ",".join(bans)}
+            **{f"verdict_{k}": v for k, v in counts.items()}, "active_bans": ",".join(bans),
+            "clean_packaging_verified": clean.execute("SELECT count(*) FROM products WHERE verdict = 'ok'").fetchone()[0],
+            "clean_packaging_unknown": clean.execute("SELECT count(*) FROM products WHERE verdict = 'unknown'").fetchone()[0]}
     clean.executemany("INSERT INTO build_info VALUES (?, ?)", [(k, str(v)) for k, v in info.items()])
     clean.commit()
     clean.execute("DETACH src")
     with open(ROOT / "products_clean.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         cur = clean.execute("SELECT code, source, name, brands, categories, countries, ingredients, packaging, "
+                            "CASE verdict WHEN 'ok' THEN 'verified' ELSE 'unknown' END AS packaging_status, "
                             "off_url, amazon_url FROM products")
         w.writerow([d[0] for d in cur.description])
         w.writerows(cur)

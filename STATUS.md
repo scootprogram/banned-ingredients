@@ -28,9 +28,11 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
 
 ## Latest build (2026-10-31, beauty and household only)
 - Checked 66,683 products:
-  - 110 passed (97 beauty, 13 household)
+  - 4,113 have clean ingredients and are listed on the page:
+    - 110 with packaging verified plastic-free (97 beauty, 13 household)
+    - 4,003 with packaging not verified yet (3,905 beauty, 98 household)
   - 18,926 excluded
-  - 47,647 unknown
+  - the rest unknown for reasons other than packaging (no ingredient or material data)
 - **Shareable search page**: https://claude.ai/artifact/K9XSaVNM81cksFh63a4wQx (private until shared)
   - Source: `site/clean-shelf.html`
   - Data: `python3 site/export_json.py . <out>/products.json`, then publish with `files`
@@ -57,8 +59,7 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
   - Each one gets a chance of passing: among products in the same category whose packaging is recorded, the share that pass.
   - Beauty products rarely pass. Bar soap is the best category at about 8.5%, so the cutoff is 5%.
 - `needs_packaging.csv`: the 84 candidates at or above 5% (11 in the US), ranked US first, then by chance² × (1 + log(scans)).
-- The page's **Help fill the gaps** tab shows them with what's missing and how to add it on Open Beauty Facts or Open Products Facts. Link straight to it with `#gaps`.
-- Page data: `data/needs_packaging.json`, published as `needs.json` next to `products.json`.
+- The page's old **Help fill the gaps** tab was replaced on 2026-10-31 by packaging status on the main list (see below). This CSV is kept as an offline to-do list.
 
 ## Rebuild steps (repeat to refresh)
 1. `bash pipeline/download.sh`
@@ -71,10 +72,25 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
 3. `python3 pipeline/needs_packaging.py` refreshes the to-do list (seconds).
 4. Spot-check a random sample of OK products for anything that slipped through.
 5. Run `python3 tests/test_banlist.py`.
-6. Update the page:
+6. If there are Help answers, count them: `python3 pipeline/packaging_votes.py <responses CSV or URL>`.
+7. Update the page:
    - Export `products.json` with `site/export_json.py`.
-   - Copy `data/needs_packaging.json` as `needs.json`.
-   - Publish `site/clean-shelf.html` with both files to the same link.
+   - Publish `site/clean-shelf.html` with it to the same link.
+   - Rebuild the website with `site/build_website.py ../scootprogram.github.io`, then push that repo.
+
+## One list with packaging status (2026-10-31)
+- `products_clean.*` holds every product with clean ingredients:
+  - verdict `ok` means the packaging is verified plastic-free.
+  - verdict `unknown` means only the packaging is in question.
+- On the page:
+  - Each product shows "Packaging verified plastic-free" or "Packaging not verified yet".
+  - A **Packaging** filter offers Any / Verified plastic-free / Not verified yet.
+  - Old `#gaps` links open the "Not verified yet" filter.
+- **Help! votes.** Each unverified product gets a "Help! Do you know this packaging?" button. It asks three separate Yes / No / Not sure questions: 100% recyclable, non-toxic, sustainable.
+  - Answers go to an outside form, because public visitors can't write to the Claude page's database.
+  - The button stays hidden until `HELP_FORM` in `site/clean-shelf.html` has the form's address and field ids.
+  - Form setup (owner): create a Google Form with 4 short-answer/multiple-choice questions: barcode, then "Is the packaging 100% recyclable?", "…non-toxic?", "…sustainable?", each with choices exactly Yes / No / Not sure, none required. Then use "Get pre-filled link", fill in sample answers, and send the link to Claude. The `entry.…` ids come from it.
+- **Counting.** `pipeline/packaging_votes.py` reads the responses CSV (or the sheet's published-CSV URL). It keeps the most common of Yes/No per product and question, ignores "Not sure" and blanks, and treats ties as undecided. It writes `data/packaging_votes.json`, which `site/export_json.py` merges in. The page then shows "Visitors say (N answers): …".
 
 ## Amazon links (2026-10-31)
 - Products with a real retail barcode (UPC/EAN, not a store code starting with 2) now link to an **Amazon search by barcode**, which often lands on the exact item. An "Amazon by name" link sits next to it as a fallback.
