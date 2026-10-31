@@ -145,6 +145,8 @@ for c, s, n, b, g, w, i, p, u, verdict, qty in db.execute(
         if curated[c].get("asin") == "none":  # not sold on Amazon: no Amazon button
             r["na"] = 1
         r["t"] = curated[c].get("category") or "Other"
+        if curated[c].get("type") == "cleaning":  # judged by ingredients: browsed under "Cleaning"
+            r["mg"] = ["Cleaning"]
     elif s == "beauty":
         r["t"] = beauty_type(g, n)
     else:

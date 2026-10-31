@@ -9,7 +9,7 @@ the owner to review.
 List: data/curated_products.csv
   id           barcode (UPC/EAN) when known, else "cs-0001", "cs-0002"...
   status       pending | approved | rejected
-  type         household | beauty
+  type         household | beauty | cleaning (household products judged by ingredients)
   category     what the product is, for browsing: Straws, Utensils, Towels, Jars...
   name, brand
   materials    what the product is made of, every part with its material, e.g.
@@ -38,7 +38,7 @@ import banlist  # noqa: E402
 PATH = ROOT / "data" / "curated_products.csv"
 FIELDS = ["id", "status", "type", "category", "name", "brand", "materials", "ingredients", "packaging", "asin",
           "product_url", "countries", "added_on", "notes"]
-SOURCE = {"household": "products", "beauty": "beauty"}  # the pipeline's source names
+SOURCE = {"household": "products", "beauty": "beauty", "cleaning": "products"}  # the pipeline's source names
 VERDICT_NAMES = {banlist.OK: "ok", banlist.EXCLUDED: "excluded", banlist.UNKNOWN: "unknown"}
 
 
