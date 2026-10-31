@@ -10,10 +10,10 @@ _Last updated 2026-10-24._
 - **Exact Amazon links for 5 of 6 curated products:** Weck 743 (B08LG6S4MZ), Redecker 2" (B003XCVR86), ECOlunchbox Three-in-One 31 oz (B0040MH642), Friendsheep 6-pack XL (B0186RP2YM), Bee's Wrap 3-pack (B07MCVM6SQ). These were found through web search of amazon.com listings. The ECOlunchbox Solo Rectangle listing (B008UY4Z9U) was unavailable.
 - Curated `asin` = `none` means not sold on Amazon. The product shows only the maker's link.
 - **Amazon links in general:** the 475 database products use barcode search. Nothing is needed from the owner until Amazon's product API is available (after 3 sales), when a script can fill exact links for everything.
-- **New candidates, pending approval:**
-  - `cs-0008` Package Free stainless steel straw: 100% steel, package-free, not on Amazon. Amazon straw sets found include nylon brushes or silicone tips.
-  - `cs-0009` Bambu bamboo utensils: one piece, no glue or lacquer. The oil isn't named and could be soy; confirm.
-  - `cs-0010` Rawganique Bremington towels: 100% organic cotton with cotton thread.
+- **Round 2:**
+  - **Published 2026-10-31 (owner approved):** `cs-0008` Package Free stainless steel straw (100% steel, package-free, not on Amazon; Amazon straw sets found include nylon brushes or silicone tips) and `cs-0010` Rawganique Bremington towels (100% organic cotton with cotton thread).
+  - **On hold:** `cs-0009` Bambu bamboo utensils (one piece, no glue or lacquer, but the finish oil isn't named and could be soy) and `cs-0007` Lodge skillet (seasoning oil possibly soy).
+  - The US page has 483 products, 9 of them household.
 
 ## Curated products (2026-10-31)
 - `data/curated_products.csv` is a hand-maintained list for products the open databases don't cover, mainly household goods. `pipeline/curated_products.py check | approve <id> | reject <id>` manages it.
