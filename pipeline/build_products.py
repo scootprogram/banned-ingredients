@@ -35,7 +35,28 @@ SOURCES = [  # (source name, CSV export, packaging TSV)
     ("products", "en.openproductsfacts.org.products.csv.gz", "openproductsfacts.packaging.tsv"),
 ]
 COLUMNS = ["code", "url", "product_name", "brands", "categories_en", "countries_en", "ingredients_text",
-           "ingredients_tags", "allergens_en", "traces_en", "packaging_en", "image_small_url"]
+           "ingredients_tags", "allergens_en", "traces_en", "packaging_en", "image_small_url", "quantity"]
+# Food and drink filed in the beauty/household databases by mistake, judged by whole category
+# names (so "Non-food-products" never counts as food).
+# Clearly food: always out of scope.
+STRONG_FOOD = {"bottled water", "sports drink", "sports drinks", "sodas", "carbonated drinks", "soft drinks",
+               "chocolates", "chocolate candies", "candies", "meat snack", "meat snacks", "meats", "canned meats",
+               "prepared meats", "canned foods", "cheeses", "breakfast cereals", "cereals and their products",
+               "cereals and potatoes", "flours", "breads", "pastas", "noodles", "instant noodles", "nuts",
+               "peanut butter", "syrups", "simple syrups", "sweeteners", "sugars", "teas", "hot beverages",
+               "dehydrated beverages", "margarines", "spreads", "plant based spreads", "creamer", "milk substitutes",
+               "dairy substitutes", "fruit snack", "fruit snacks", "yogurts", "desserts"}
+# Ambiguous: cosmetic oils and butters get these too, so they only count when nothing marks the
+# product as beauty or household.
+WEAK_FOOD = {"plant based foods and beverages", "plant based foods", "fats", "vegetable fats", "vegetable oils",
+             "beverages", "beverages and beverages preparations", "beverage preparations", "plant based beverages",
+             "snacks", "sweet snacks", "confectioneries", "dietary supplements", "dairies", "fermented foods",
+             "mushrooms", "nuts and their products", "dried products", "coconut oils", "cocoa butter", "foods"}
+BEAUTY_MARKERS = {"cosmetic products", "open beauty facts", "non food products", "hair care", "lip gloss",
+                  "skin care", "body care", "body", "health beauty", "personal care", "hygiene", "shampoos",
+                  "soaps", "body oils", "face", "lotion", "creams"}
+BEAUTY_NAME_WORDS = {"body", "hair", "lip", "lips", "skin", "lotion", "shampoo", "conditioner", "soap", "deodorant",
+                     "balm", "cream", "serum", "face", "facial", "massage", "bath", "cleanser", "toothpaste"}
 # Unknown reasons that are NOT about packaging: products with these aren't known to be clean.
 NOT_PACKAGING_REASONS = ["no ingredients or materials information", "material not identified",
                          "material text has no recognizable words"]
@@ -152,10 +173,20 @@ def init_worker():
     _matcher = banlist.MemoryMatcher(db)
 
 
+def is_food(p):
+    cats = {banlist.norm(c) for c in p["categories_en"].split(",")}
+    if cats & STRONG_FOOD:
+        return True
+    beauty = cats & BEAUTY_MARKERS or set(banlist.norm(p["product_name"]).split()) & BEAUTY_NAME_WORDS
+    return bool(cats & WEAK_FOOD) and not beauty
+
+
 def check(item):
     source, p, extra = item
     packaging = packaging_text(p, extra)
-    if source == "beauty" and is_article(p):
+    if is_food(p):  # food or drink in a beauty/household database: out of scope
+        verdict, results, unknown = banlist.EXCLUDED, {}, []
+    elif source == "beauty" and is_article(p):
         # Toothbrushes, pads, wipes, razors... list their materials in the ingredients field, so
         # check that text as material too: every part must then be a known material.
         verdict, results, unknown = _matcher.check(ingredients_text(p), packaging, p["ingredients_text"],
@@ -168,17 +199,18 @@ def check(item):
     else:
         verdict, results, unknown = _matcher.check(ingredients_text(p), packaging, None,
                                                    p["product_name"], p["categories_en"])
-    banned = sorted({_matcher.ban(b)["slug"] for rows in results.values() for r in rows for b in r[2]})
+    banned = sorted({_matcher.ban(b)["slug"] for rows in results.values() for r in rows for b in r[2]}) \
+        or (["food-or-drink"] if verdict == banlist.EXCLUDED else [])
     return (p["code"], source, p["product_name"], p["brands"], p["categories_en"], p["countries_en"],
             p["ingredients_text"], packaging, VERDICT_NAMES[verdict], ",".join(banned), "; ".join(unknown),
-            p["url"], amazon_url(p), p["image_small_url"])
+            p["url"], amazon_url(p), p["image_small_url"], p["quantity"])
 
 
 SCHEMA = """
 CREATE TABLE products (
     code TEXT, source TEXT, name TEXT, brands TEXT, categories TEXT, countries TEXT,
     ingredients TEXT, packaging TEXT, verdict TEXT, banned TEXT, unknown_reasons TEXT,
-    off_url TEXT, amazon_url TEXT, image_url TEXT,
+    off_url TEXT, amazon_url TEXT, image_url TEXT, quantity TEXT,
     PRIMARY KEY (source, code)
 );
 """
@@ -202,12 +234,12 @@ def main():
             counts[row[8]] = counts.get(row[8], 0) + 1
             batch.append(row)
             if len(batch) >= 20000:
-                out.executemany("INSERT OR REPLACE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+                out.executemany("INSERT OR REPLACE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
                 batch.clear()
                 rate = n / (time.time() - start)
                 print(f"\r  {n:,} products checked ({rate:,.0f}/s)  " +
                       "  ".join(f"{k}={v:,}" for k, v in sorted(counts.items())), end="", file=sys.stderr)
-    out.executemany("INSERT OR REPLACE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+    out.executemany("INSERT OR REPLACE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
     out.execute("CREATE INDEX idx_verdict ON products (verdict)")
     out.commit()
     print(file=sys.stderr)
