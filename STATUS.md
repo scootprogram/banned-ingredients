@@ -78,6 +78,15 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
    - Publish `site/clean-shelf.html` with it to the same link.
    - Rebuild the website with `site/build_website.py ../scootprogram.github.io`, then push that repo.
 
+## Open items (2026-10-31): saved but NOT published yet
+- Committed, but the page and website still show the previous version:
+  - Generated names for products with no name (brand + type + size, marked "name not recorded").
+  - Food/drink filed as beauty is excluded (`is_food` in `pipeline/build_products.py`).
+- Waiting on the owner:
+  1. Should dietary supplements and over-the-counter medicines (vitamins, fish oil, melatonin, ZzzQuil, antacids; about 80 products) count as food? The current filter excludes them through the `WEAK_FOOD` "dietary supplements" category.
+  2. A redesign with features the owner likes from another site. Build the site's own version; don't copy that site's text, design or branding.
+- To publish once decided: run steps 2 and 7 under "Rebuild steps".
+
 ## US only (2026-10-31)
 - The site only shows products recorded as sold in the United States, because it sells through amazon.com. The filter is in `site/export_json.py`. `products_clean.*` still holds the worldwide list (3,915).
 - The page has 427 products: 1 with packaging verified plastic-free and 426 with packaging not verified yet.
