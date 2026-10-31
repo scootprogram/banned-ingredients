@@ -35,6 +35,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink);
   font-family: var(--font-body); font-size: 16px; line-height: 1.5;
@@ -91,6 +92,19 @@ select {
 .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--muted); cursor: pointer; }
 .toggle input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
 .warn { font-size: 0.8125rem; color: var(--kraft); font-weight: 700; }
+.views { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.views button {
+  font: inherit; font-weight: 700; padding: 10px 14px; cursor: pointer; background: none; color: var(--muted);
+  border: none; border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.views button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.views button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.intro { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font-size: 0.9375rem; }
+.intro p { margin: 0 0 8px; max-width: 65ch; }
+.intro ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.gap { font-size: 0.875rem; font-weight: 700; color: var(--kraft); }
+.chance { font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chance b { color: var(--accent); }
 .count { font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
 
 #results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -144,6 +158,20 @@ details.about a { color: var(--accent); }
     <ul class="rules" id="rules" aria-label="What's excluded"></ul>
   </header>
 
+  <div class="views" role="tablist" aria-label="View">
+    <button type="button" role="tab" id="tab-clean" data-view="clean" aria-selected="true">Clean products</button>
+    <button type="button" role="tab" id="tab-gaps" data-view="gaps" aria-selected="false">Help fill the gaps</button>
+  </div>
+
+  <div class="intro" id="gaps-intro" hidden>
+    <p>These products pass every ingredient check but can't be listed yet, because nobody has recorded what their packaging is made of. Adding it takes about a minute, and every product you fill in is checked again in the next update.</p>
+    <ol>
+      <li>Install the free Open Food Facts app and scan the product's barcode, or open its record from the link below.</li>
+      <li>Choose <b>Edit</b>, then <b>Packaging</b>.</li>
+      <li>Add every part with its material, including the cap or lid: for example "jar: glass", "lid: metal", "label: paper".</li>
+    </ol>
+  </div>
+
   <div class="controls" role="search">
     <div class="search">
       <label for="q" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search products</label>
@@ -181,7 +209,8 @@ details.about a { color: var(--accent); }
   const KIND_LABELS = { all: "All", food: "Food", beauty: "Beauty", products: "Household", petfood: "Pet food" };
   const PAGE = 40;
   const $ = (id) => document.getElementById(id);
-  const state = { q: "", kind: "all", country: "", loose: false, shown: PAGE };
+  const state = { view: "clean", q: "", kind: "all", country: "", loose: false, shown: PAGE };
+  const data = { clean: [], gaps: null };
   let rows = [], meta = {};
 
   const fold = (s) => (s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -214,7 +243,7 @@ details.about a { color: var(--accent); }
   }
 
   function matches(r, words) {
-    if (r.x && !state.loose) return false;
+    if (state.view === "clean" && r.x && !state.loose) return false;
     if (state.kind !== "all" && r.s !== state.kind) return false;
     if (state.country && !(r.w || "").split(",").includes(state.country)) return false;
     return words.every((w) => r._hay.includes(w));
@@ -227,8 +256,15 @@ details.about a { color: var(--accent); }
       const score = (r) => words.reduce((t, w) => t + (fold(r.n).includes(w) ? 4 : fold(r.b).includes(w) ? 2 : 0), 0);
       hits.sort((a, b) => score(b) - score(a));
     }
-    $("count").textContent = `${hits.length.toLocaleString()} product${hits.length === 1 ? "" : "s"}`;
+    $("count").textContent = `${hits.length.toLocaleString()} product${hits.length === 1 ? "" : "s"}` +
+      (state.view === "gaps" ? " to fill in" : "");
     const list = hits.slice(0, state.shown);
+    if (state.view === "gaps") {
+      $("results").innerHTML = list.length ? list.map(gapItem(words)).join("")
+        : `<li class="empty">No products match. Try fewer words or another country.</li>`;
+      $("more").hidden = hits.length <= state.shown;
+      return;
+    }
     $("results").innerHTML = list.length ? list.map((r) => `
       <li class="item">
         <h2 class="name">${highlight(r.n || "(no name)", words)}</h2>
@@ -250,24 +286,72 @@ details.about a { color: var(--accent); }
     $("more").hidden = hits.length <= state.shown;
   }
 
+  const gapItem = (words) => (r) => `
+      <li class="item">
+        <h2 class="name">${highlight(r.n || "(no name)", words)}</h2>
+        <span class="kind">${esc(KIND_LABELS[r.s] || r.s)}</span>
+        <div class="brand">${highlight(r.b || "Unknown brand", words)}</div>
+        <div class="meta">
+          <div class="gap">${esc(r.m)}</div>
+          ${r.p ? `<div class="chips" aria-label="Packaging recorded so far">${[...new Set(r.p.split(/[;,]/).map((x) => x.trim().replace(/^[a-z]{2}:/, "").replace(/-/g, " ").toLowerCase()).filter(Boolean))]
+            .map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>` : ""}
+          <div class="chance">Likely to pass: <b>${Math.round(r.k * 100)}%</b> of similar products with recorded packaging do${r.v ? ` · scanned by ${r.v.toLocaleString()} ${r.v === 1 ? "person" : "people"}` : ""}</div>
+          <div class="where">${r.w ? "Sold in " + esc(r.w.split(",").slice(0, 4).join(", ")) + (r.w.split(",").length > 4 ? "…" : "") + " · " : ""}<span class="code">${esc(r.c)}</span></div>
+          <div class="links">
+            <a href="${esc(r.u)}" target="_blank" rel="noopener">Open record to add packaging</a>
+            <a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>
+          </div>
+        </div>
+      </li>`;
+
+  function setView(view) {
+    state.view = view; state.shown = PAGE; state.kind = "all"; state.country = "";
+    document.querySelectorAll(".views button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === view));
+    $("gaps-intro").hidden = view !== "gaps";
+    $("loose").closest("label").hidden = view !== "clean" || !data.clean.some((r) => r.x);
+    $("q").placeholder = view === "gaps" ? "Search products that need packaging info" : "Search by name, brand, category or ingredient";
+    try { history.replaceState(null, "", view === "gaps" ? "#gaps" : location.pathname + location.search); } catch (e) {}
+    if (view === "gaps" && !data.gaps) {
+      $("count").textContent = "Loading products...";
+      $("results").innerHTML = "";
+      fetch("needs.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then((list) => {
+          data.gaps = list;
+          list.forEach((r) => (r._hay = fold([r.n, r.b, r.g, r.i].join(" "))));
+          if (state.view === "gaps") { rows = list; setupFilters(); render(); }
+        })
+        .catch(() => { $("count").textContent = ""; $("results").innerHTML = `<li class="empty">The list didn't load. Reload the page to try again.</li>`; });
+      return;
+    }
+    rows = view === "gaps" ? data.gaps : data.clean;
+    setupFilters();
+    render();
+  }
+
   function setupFilters() {
     const kinds = ["all", ...Object.keys(KIND_LABELS).filter((k) => k !== "all" && rows.some((r) => r.s === k))];
     $("kinds").innerHTML = kinds.map((k) =>
       `<button type="button" data-kind="${k}" aria-pressed="${k === state.kind}">${KIND_LABELS[k]}</button>`).join("");
-    $("kinds").addEventListener("click", (e) => {
-      const b = e.target.closest("button[data-kind]");
-      if (!b) return;
-      state.kind = b.dataset.kind; state.shown = PAGE;
-      $("kinds").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
-      render();
-    });
+
     const counts = {};
     rows.forEach((r) => (r.w || "").split(",").filter(Boolean).forEach((c) => (counts[c] = (counts[c] || 0) + 1)));
     const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 40);
     $("country").innerHTML = `<option value="">Sold anywhere</option>` +
       top.map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n.toLocaleString()})</option>`).join("");
-    $("country").addEventListener("change", (e) => { state.country = e.target.value; state.shown = PAGE; render(); });
   }
+
+  $("kinds").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-kind]");
+    if (!b) return;
+    state.kind = b.dataset.kind; state.shown = PAGE;
+    $("kinds").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    render();
+  });
+  $("country").addEventListener("change", (e) => { state.country = e.target.value; state.shown = PAGE; render(); });
+  document.querySelector(".views").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-view]");
+    if (b && b.dataset.view !== state.view) setView(b.dataset.view);
+  });
 
   let timer;
   $("q").addEventListener("input", (e) => {
@@ -280,14 +364,15 @@ details.about a { color: var(--accent); }
   fetch("products.json").then((r) => {
     if (!r.ok) throw new Error(r.status);
     return r.json();
-  }).then((data) => {
-    meta = data.meta; rows = data.products;
+  }).then((json) => {
+    meta = json.meta; data.clean = rows = json.products;
     rows.forEach((r) => (r._hay = fold([r.n, r.b, r.g, r.i].join(" "))));
     $("rules").innerHTML = meta.bans.map((b) => `<li>${esc(b)}</li>`).join("");
     $("built").textContent = `Checked ${Number(meta.checked).toLocaleString()} products on ${meta.built}; ${rows.length.toLocaleString()} passed.`;
     const loose = rows.filter((r) => r.x).length;
     $("loose-label").textContent = `Include ${loose.toLocaleString()} items whose cap or lid isn't listed`;
     $("loose").closest("label").hidden = loose === 0;
+    if (location.hash === "#gaps") { setView("gaps"); return; }
     setupFilters();
     render();
   }).catch(() => {

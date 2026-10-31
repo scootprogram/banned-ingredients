@@ -41,19 +41,36 @@ _Last updated 2026-10-24._
   - A few products with wrong categories.
   - Canned fish with neither a category nor a meat/fish first ingredient.
 
-## Rebuild steps (all done; repeat to refresh)
+## Needs-packaging list (2026-10-31)
+- `python3 pipeline/needs_packaging.py` (about 3 minutes, after `build_products.py`) finds products that pass every ingredient check and are held back only by missing or incomplete packaging details.
+  - 430,882 products are held back this way (197,044 sold in the US).
+  - Each one gets a chance of passing: among products in the same category whose packaging is recorded, the share that pass. Eggs are about 70%, sugar about 35%, sodas near 0.
+  - Ranked US first, then by chance² × (1 + log(scans)), so a likely pass beats a popular long shot.
+- `needs_packaging.csv`: the 30,680 candidates with at least a 10% chance (10,147 in the US).
+- The page's **Help fill the gaps** tab shows the top 2,000 (all US) with what's missing and how to add it in the Open Food Facts app. Link straight to it with `#gaps`.
+- Page data: `data/needs_packaging.json`, published as `needs.json` next to `products.json`.
+
+## Rebuild steps (repeat to refresh)
 1. `bash pipeline/download.sh`
    - Downloads about 1.5 GB of CSV exports.
    - Then streams the 13 GB food JSONL to extract packaging, which takes about 20 minutes.
-   - The first attempt was cut off by a network reset. The script now fails loudly on that, and re-running it skips files that are already complete.
+   - Re-running skips files that are already complete. A broken connection fails loudly instead of leaving a truncated file.
 2. `python3 pipeline/build_products.py`
-   - Takes about 11 minutes for roughly 4 million products.
+   - Takes about 7 minutes for roughly 4.6 million products.
    - Writes `products_clean.db` and `products_clean.csv`.
-3. Spot-check a random sample of OK products for anything that slipped through, as was done in the trial run.
-4. Commit `products_clean.db` and `products_clean.csv` if they're small enough. GitHub rejects files over 100 MB.
-5. Optional:
-   - Build a web page for searching or browsing the clean list.
-   - Show "unknown" products that only lack packaging details, as possible candidates.
+3. `python3 pipeline/needs_packaging.py` refreshes the to-do list (about 3 minutes).
+4. Spot-check a random sample of OK products for anything that slipped through.
+5. Run `python3 tests/test_banlist.py`.
+6. Update the page:
+   - Export `products.json` with `site/export_json.py`.
+   - Copy `data/needs_packaging.json` as `needs.json`.
+   - Publish `site/clean-shelf.html` with both files to the same link.
+
+## Ideas not started yet
+- A personal verification list (products you've checked yourself) that overrides Open Food Facts.
+- A monthly automatic rebuild that updates the page.
+- A "report a problem" button on the page.
+- Exact Amazon product links (needs an Amazon Associates account).
 
 ## Known limits
 - **OK means every packaging part that is listed is plastic-free.** If the data leaves out a part, such as the plastic bag inside a cereal box, the product can still pass.
