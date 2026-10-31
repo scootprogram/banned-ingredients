@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS aliases (
     alias         TEXT NOT NULL,
     alias_norm    TEXT NOT NULL,                    -- normalized form used for matching
     fields        TEXT,                             -- NULL or comma list, e.g. 'packaging,material'
+    match         TEXT NOT NULL DEFAULT 'word'      -- 'word' = whole words; 'stem' = anywhere inside a word
+                  CHECK (match IN ('word', 'stem')),
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (ingredient_id, alias_norm)
 );

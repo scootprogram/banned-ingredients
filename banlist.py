@@ -25,7 +25,9 @@ MAX_PHRASE_WORDS = 6  # longest alias/synonym we try to match, in words
 TRACE_RE = re.compile(r"\b(may contain|may also contain|traces? of|made in a facility|"
                       r"processed in a facility|produced in a facility|manufactured on)\b"
                       r"(?: that also processes| that processes)?", re.I)
-NEGATIONS = {"no", "non", "without", "zero"}
+# "no plastic", "sans plastique", "ohne Kunststoff", "без пластика", ...
+NEGATIONS = {"no", "non", "without", "zero", "sans", "ohne", "kein", "keine", "sin", "senza", "sem", "zonder",
+             "geen", "utan", "uden", "uten", "bez", "без", "nicht"}
 # Packaging/material words that say nothing about what the thing is made of.
 FILLER_WORDS = {"recyclable", "recycled", "fsc", "certified", "eco", "sustainable", "sustainably", "sourced",
                 "100", "percent", "pure", "natural", "organic", "new", "the", "a", "of", "with", "en",
@@ -157,6 +159,8 @@ def connect():
         sys.exit("banlist.db uses the old format. Export it first with the old tool, or rebuild with\n"
                  "  rm banlist.db && python3 banlist.py init --seed seed.csv")
     db.executescript(SCHEMA_PATH.read_text())
+    if "match" not in {r[1] for r in db.execute("PRAGMA table_info(aliases)")}:  # added 2026-10-31
+        db.execute("ALTER TABLE aliases ADD COLUMN match TEXT NOT NULL DEFAULT 'word'")
     return db
 
 
@@ -172,12 +176,16 @@ def get_ban(db, slug):
     return row
 
 
-def add_aliases(db, ingredient_id, aliases, fields=None):
+def add_aliases(db, ingredient_id, aliases, fields=None, match="word"):
+    """match='stem' aliases match anywhere inside a word ('acrylat' catches 'acrylatescala')."""
     added = []
     for alias in aliases:
         if norm(alias):
-            cur = db.execute("INSERT OR IGNORE INTO aliases (ingredient_id, alias, alias_norm, fields) "
-                             "VALUES (?, ?, ?, ?)", (ingredient_id, alias.strip(), norm(alias), fields or None))
+            cur = db.execute("INSERT OR IGNORE INTO aliases (ingredient_id, alias, alias_norm, fields, match) "
+                             "VALUES (?, ?, ?, ?, ?)", (ingredient_id, alias.strip(), norm(alias), fields or None, match))
+            if not cur.rowcount and match == "stem":  # already a whole-word alias: widen it to a stem
+                cur = db.execute("UPDATE aliases SET match = 'stem' WHERE ingredient_id = ? AND alias_norm = ? "
+                                 "AND match = 'word'", (ingredient_id, norm(alias)))
             if cur.rowcount:
                 added.append(alias.strip())
     return added
@@ -211,7 +219,7 @@ def add_roots(db, ingredient_id, kind, node_ids, warn=True):
 
 def upsert_ban(db, slug, name, applies_to="ingredients", category=None, reason=None, strictness="exact",
                include_children=True, ingredient_roots=(), packaging_roots=(), aliases=(),
-               material_aliases=(), exceptions=(), note=None):
+               material_aliases=(), exceptions=(), note=None, stems=()):
     """Create a ban, or update the existing one with the same slug. Lists are only ever added to."""
     existing = db.execute("SELECT * FROM banned_ingredients WHERE slug = ?", (slug,)).fetchone()
     fields = dict(name=name, applies_to=csv_fields(applies_to) or "ingredients", category=category or None,
@@ -234,6 +242,7 @@ def upsert_ban(db, slug, name, applies_to="ingredients", category=None, reason=N
                                        + add_roots(db, ban_id, "packaging", packaging_roots)),
                        ("aliases_added", add_aliases(db, ban_id, aliases)),
                        ("material_aliases_added", add_aliases(db, ban_id, material_aliases, "packaging,material")),
+                       ("stems_added", add_aliases(db, ban_id, stems, match="stem")),
                        ("exceptions_added", add_exceptions(db, ban_id, exceptions))):
         if added:
             changes[key] = added
@@ -363,10 +372,22 @@ class Matcher:
     def alias_hits(self, gram, field):
         return [r[0] for r in self.db.execute(
             """SELECT a.ingredient_id FROM aliases a JOIN banned_ingredients b ON b.id = a.ingredient_id
-               WHERE a.alias_norm = :g AND b.active = 1
+               WHERE a.alias_norm = :g AND a.match = 'word' AND b.active = 1
                  AND instr(',' || b.applies_to || ',', ',' || :f || ',')
                  AND (a.fields IS NULL OR instr(',' || a.fields || ',', ',' || :f || ','))""",
             {"g": gram, "f": field})]
+
+    def stems(self):
+        """[(stem, ban_id, fields or None)] for active bans; few enough to load once."""
+        if not hasattr(self, "_stems"):
+            self._stems = [(r[0], r[1], set(r[2].split(",")) if r[2] else None) for r in self.db.execute(
+                """SELECT a.alias_norm, a.ingredient_id, a.fields FROM aliases a
+                   JOIN banned_ingredients b ON b.id = a.ingredient_id WHERE a.match = 'stem' AND b.active = 1""")]
+        return self._stems
+
+    def stem_hits(self, word, field):
+        return [(stem, b) for stem, b, fields in self.stems()
+                if stem in word and field in self.ban(b)["applies_to"].split(",") and (fields is None or field in fields)]
 
     def lookup_node(self, kind, gram):
         row = self.db.execute("SELECT node_id FROM taxonomy_synonyms WHERE kind = ? AND text_norm = ? "
@@ -427,6 +448,11 @@ class Matcher:
                 continue
             for ban_id in self.alias_hits(" ".join(words[start:end]), field):
                 hits.setdefault(ban_id, f"alias '{' '.join(words[start:end])}'")
+        for i, word in enumerate(words):  # stems: inside glued or misspelled words
+            if negated(words, i) or (i + 1 < len(words) and words[i + 1] == "free"):
+                continue
+            for stem, ban_id in self.stem_hits(word, field):
+                hits.setdefault(ban_id, f"stem '{stem}' in '{word}'")
         return {b: why for b, why in hits.items() if not self.excepted(b, p)}, [n for _, _, n in nodes]
 
     def check_field(self, text, field):
@@ -443,8 +469,10 @@ class Matcher:
                 if is_trace:
                     hits = {b: w for b, w in hits.items() if self.ban(b)["strictness"] == "traces"}
                 p = norm(phrase)
-                identified = bool(hits or [n for n in nodes if n != "en:unknown"] or p in NO_PACKAGING
-                                  or all(w in FILLER_WORDS for w in p.split()))
+                words = p.split()
+                is_claim = bool(words) and (words[0] in NEGATIONS or words[-1] == "free")  # "sans plastique", "plastic free"
+                identified = bool(hits or [n for n in nodes if n != "en:unknown"] or p in NO_PACKAGING or is_claim
+                                  or all(w in FILLER_WORDS for w in words))
                 results.append((phrase, nodes, hits, is_trace, identified))
         return results
 
@@ -526,7 +554,7 @@ class MemoryMatcher(Matcher):
         self.bans = {r["id"]: r for r in db.execute("SELECT * FROM banned_ingredients WHERE active = 1")}
         self.applies = {i: set(b["applies_to"].split(",")) for i, b in self.bans.items()}
         self.aliases = {}
-        for r in db.execute("SELECT ingredient_id, alias_norm, fields FROM aliases"):
+        for r in db.execute("SELECT ingredient_id, alias_norm, fields FROM aliases WHERE match = 'word'"):
             if r[0] in self.bans:
                 self.aliases.setdefault(r[1], []).append((r[0], set(r[2].split(",")) if r[2] else None))
         self.exceptions = {}
@@ -552,6 +580,10 @@ class MemoryMatcher(Matcher):
     def alias_hits(self, gram, field):
         return [b for b, fields in self.aliases.get(gram, ())
                 if field in self.applies[b] and (fields is None or field in fields)]
+
+    def stem_hits(self, word, field):
+        return [(stem, b) for stem, b, fields in self.stems()
+                if stem in word and field in self.applies[b] and (fields is None or field in fields)]
 
     def lookup_node(self, kind, gram):
         return self.synonyms.get((kind, gram))
@@ -649,9 +681,10 @@ def cmd_alias(db, args):
             log(db, ban["id"], "alias_remove", {"aliases": removed}, args.note)
         print(f"removed {len(removed)} alias(es) from {args.slug}")
     else:
-        added = add_aliases(db, ban["id"], args.aliases, csv_fields(args.fields) if args.fields else None)
+        added = add_aliases(db, ban["id"], args.aliases, csv_fields(args.fields) if args.fields else None,
+                            "stem" if args.stem else "word")
         if added:
-            log(db, ban["id"], "alias_add", {"aliases": added, "fields": args.fields}, args.note)
+            log(db, ban["id"], "alias_add", {"aliases": added, "fields": args.fields, "stem": args.stem}, args.note)
         print(f"added {len(added)} alias(es) to {args.slug}")
 
 
@@ -706,7 +739,8 @@ def cmd_show(db, args):
     roots = [f"{r['kind']}:{r['node_id']}" for r in
              db.execute("SELECT kind, node_id FROM ban_roots WHERE ingredient_id = ? ORDER BY kind, node_id", (ban["id"],))]
     aliases = [f"{r['alias']}" + (f" [{r['fields']}]" if r["fields"] else "") for r in
-               db.execute("SELECT alias, fields FROM aliases WHERE ingredient_id = ? ORDER BY alias", (ban["id"],))]
+               db.execute("SELECT alias, CASE match WHEN 'stem' THEN coalesce(fields || ',', '') || 'stem' "
+                          "ELSE fields END AS fields FROM aliases WHERE ingredient_id = ? ORDER BY alias", (ban["id"],))]
     excs = [r["phrase"] for r in db.execute("SELECT phrase FROM exceptions WHERE ingredient_id = ? ORDER BY phrase", (ban["id"],))]
     print(f"{'taxonomy roots':>17}: {', '.join(roots) or '-'}")
     print(f"{'taxonomy covers':>17}: {len(covered_nodes(db, ban)):,} node(s) (see `expand {args.slug}`)")
@@ -778,7 +812,8 @@ def cmd_log(db, args):
 IMPORT_HELP = """CSV columns (lists separated by |):
   slug, name, applies_to (ingredients|packaging|material), category, reason, strictness (exact|traces),
   include_children (1|0), ingredient_taxonomy, packaging_taxonomy, aliases,
-  material_aliases (only matched in packaging/material text), exceptions"""
+  material_aliases (only matched in packaging/material text), exceptions,
+  stems (matched anywhere inside a word)"""
 
 
 def cmd_import(db, args):
@@ -790,7 +825,8 @@ def cmd_import(db, args):
                                    row.get("applies_to") or "ingredients", row.get("category"), row.get("reason"),
                                    row.get("strictness") or "exact", (row.get("include_children") or "1") != "0",
                                    split("ingredient_taxonomy") + split("taxonomy_id"), split("packaging_taxonomy"),
-                                   split("aliases"), split("material_aliases"), split("exceptions"), args.note)
+                                   split("aliases"), split("material_aliases"), split("exceptions"), args.note,
+                                   split("stems"))
             counts[action] = counts.get(action, 0) + 1
             if (row.get("active") or "1") == "0":
                 db.execute("UPDATE banned_ingredients SET active = 0 WHERE slug = ?", (row["slug"].strip(),))
@@ -801,7 +837,7 @@ def cmd_export(db, args):
     out = open(args.file, "w", newline="", encoding="utf-8") if args.file != "-" else sys.stdout
     w = csv.writer(out)
     w.writerow(["slug", "name", "applies_to", "category", "reason", "strictness", "include_children", "active",
-                "ingredient_taxonomy", "packaging_taxonomy", "aliases", "material_aliases", "exceptions"])
+                "ingredient_taxonomy", "packaging_taxonomy", "aliases", "material_aliases", "exceptions", "stems"])
     q = lambda sql, *p: "|".join(r[0] for r in db.execute(sql, p))
     for b in db.execute("SELECT * FROM banned_ingredients ORDER BY id"):
         i = b["id"]
@@ -809,9 +845,10 @@ def cmd_export(db, args):
                     b["strictness"], b["include_children"], b["active"],
                     q("SELECT node_id FROM ban_roots WHERE ingredient_id = ? AND kind = 'ingredient'", i),
                     q("SELECT node_id FROM ban_roots WHERE ingredient_id = ? AND kind = 'packaging'", i),
-                    q("SELECT alias FROM aliases WHERE ingredient_id = ? AND fields IS NULL ORDER BY id", i),
-                    q("SELECT alias FROM aliases WHERE ingredient_id = ? AND fields IS NOT NULL ORDER BY id", i),
-                    q("SELECT phrase FROM exceptions WHERE ingredient_id = ? ORDER BY id", i)])
+                    q("SELECT alias FROM aliases WHERE ingredient_id = ? AND fields IS NULL AND match = 'word' ORDER BY id", i),
+                    q("SELECT alias FROM aliases WHERE ingredient_id = ? AND fields IS NOT NULL AND match = 'word' ORDER BY id", i),
+                    q("SELECT phrase FROM exceptions WHERE ingredient_id = ? ORDER BY id", i),
+                    q("SELECT alias FROM aliases WHERE ingredient_id = ? AND match = 'stem' ORDER BY id", i)])
     if out is not sys.stdout:
         out.close()
         print(f"exported to {args.file}")
@@ -858,6 +895,7 @@ def main():
     s.add_argument("slug")
     s.add_argument("aliases", nargs="+")
     s.add_argument("--fields", help="only match in these fields, e.g. packaging,material")
+    s.add_argument("--stem", action="store_true", help="match anywhere inside a word ('acrylat' catches 'acrylatescala')")
     s.add_argument("--remove", action="store_true")
     s.add_argument("--note")
     s.set_defaults(fn=cmd_alias)

@@ -52,6 +52,20 @@ CASES = [
     ("Drink", "de:fsc", None, "UNKNOWN"),                                        # a label, not a material
     ("Chocolate", "aluminium foil, paper", None, "OK"),                          # plain foil is fine
     ("Fruit juice", "Recycled as food- & beverage-karton", None, "EXCLUDED"),    # liquid carton by name
+    (None, "none", "Ручка полипропилен, термопластичный эластомер; щетина полибутилентерефталат.", "EXCLUDED"),
+    (None, "none", "Manche en polypropylène", "EXCLUDED"),                       # French polypropylene
+    ("Savon, huile d'olive", "papier, sans plastique", None, "OK"),             # French "without plastic"
+    ("Seife", "Papier, ohne Kunststoff", None, "OK"),                          # German "without plastic"
+    ("Soap", "paper wrapper, plastic-free", None, "OK"),                        # a claim, not a part
+    ("Aqua, Acrylatescala, Glycerin", "glass jar, glass lid", None, "EXCLUDED"),  # glued words: stem 'acrylat'
+    ("Aqua, 4polyquaternium-10", "glass jar, glass lid", None, "EXCLUDED"),       # stem 'polyquatern'
+    ("Silica, Sodium Bicarbonate", "glass jar, glass lid", None, "OK"),           # silica is not silicone
+    ("Aqua, Polysorbate 20, Polyglyceryl-3 Caprate", "glass jar, glass lid", None, "OK"),  # not plastics
+    ("Aqua, sans silicone", "glass jar, glass lid", None, "OK"),                  # negated stem
+    ("Ethyl acetate, trimellitic anhydride copolyrmer", "glass jar, glass lid", None, "EXCLUDED"),  # misspelled
+    ("Alcool, Hansaplast", "glass jar, glass lid", None, "OK"),                   # a brand, not a material
+    ("Shampoo, ohne Plastik", "glass jar, glass lid", None, "OK"),                # German "without plastic"
+    ("Мыло", "бумага", "пластик", "EXCLUDED"),                                   # Russian "plastic"
 ]
 
 # With product context: (ingredients, packaging, name, categories, expected verdict)

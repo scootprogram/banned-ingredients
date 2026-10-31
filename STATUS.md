@@ -13,7 +13,7 @@ _Last updated 2026-10-24._
   - `pipeline/download.sh` downloads the data.
   - `pipeline/build_products.py` checks every product against the ban list.
   - `search.py` searches the clean products.
-- **Tests**: `python3 tests/test_banlist.py` (130 checks across both matchers, all passing).
+- **Tests**: `python3 tests/test_banlist.py` (158 checks across both matchers, all passing).
 - **Trial run** on the first 20,000 rows of each export: 130 of 60,874 products passed. The pipeline works.
 
 ## Scope: beauty and household only (since 2026-10-31)
@@ -28,10 +28,10 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
 
 ## Latest build (2026-10-31, beauty and household only)
 - Checked 66,683 products:
-  - 4,113 have clean ingredients and are listed on the page:
-    - 110 with packaging verified plastic-free (97 beauty, 13 household)
-    - 4,003 with packaging not verified yet (3,905 beauty, 98 household)
-  - 18,926 excluded
+  - 3,915 have clean ingredients and are listed on the page:
+    - 105 with packaging verified plastic-free
+    - 3,810 with packaging not verified yet
+  - 19,241 excluded
   - the rest unknown for reasons other than packaging (no ingredient or material data)
 - **Shareable search page**: https://claude.ai/artifact/K9XSaVNM81cksFh63a4wQx (private until shared)
   - Source: `site/clean-shelf.html`
@@ -77,6 +77,14 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
    - Export `products.json` with `site/export_json.py`.
    - Publish `site/clean-shelf.html` with it to the same link.
    - Rebuild the website with `site/build_website.py ../scootprogram.github.io`, then push that repo.
+
+## Plastic in other languages (2026-10-31)
+- Found when a Russian toothbrush (7640168930479) was listed. Its materials, "polypropylene, thermoplastic elastomer, polybutylene terephthalate", were only matched in English.
+- Plastic and silicone names were added in Russian, French, German, Spanish, Italian, Polish, Dutch and Scandinavian languages.
+- "Without" words in those languages (sans, ohne, sin, senza, без…) negate a match. A packaging entry that is only a claim ("sans plastique", "plastic-free") counts as identified.
+- **Stems.** `alias --stem` matches anywhere inside a word. This catches glued or misspelled scanner text ("acrylatescala", "copolyrmer", "4polyquaternium"). Stems are chosen not to hit harmless words: there is no bare `silicon` (it would catch silica) and no bare `plast` (it would catch the Hansaplast brand).
+- **Hygiene articles.** Toothbrushes, pads, tampons, wipes, swabs, razors, sponges, brushes, bandages and shower caps have their "ingredients" checked as materials too (`ARTICLE_TERMS` in `pipeline/build_products.py`).
+- Left as is: "пластификатор" (plasticizer) in 3 Russian soaps. It's ambiguous in soap, often glycerin.
 
 ## One list with packaging status (2026-10-31)
 - `products_clean.*` holds every product with clean ingredients:

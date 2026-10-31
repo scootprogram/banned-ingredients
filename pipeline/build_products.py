@@ -64,6 +64,22 @@ def dairy_from_categories(p):
     return has(DAIRY_CATEGORIES) and not has(NOT_DAIRY)
 
 
+ARTICLE_TERMS = ["toothbrush", "toothbrushes", "tooth brush", "sanitary", "pads", "pad", "napkins", "panty liners",
+                 "pantyliners", "liners", "tampons", "tampon", "menstrual", "diapers", "diaper", "nappies", "wipes",
+                 "cotton swabs", "cotton buds", "swabs", "razors", "razor", "sponges", "sponge", "brushes", "brush",
+                 "combs", "comb", "dental floss", "floss", "interdental", "zahnburste", "brosse a dents",
+                 "serviettes hygieniques", "protege slips", "lingettes", "coton tiges", "cepillo", "spazzolino",
+                 "зубная щетка", "прокладки", "салфетки", "тампоны", "bandages", "bandage", "plasters", "plaster",
+                 "adhesive bandages", "pflaster", "pansements", "pansement", "tiritas", "cerotti", "hansaplast",
+                 "band aid", "band aids", "пластырь", "shower cap", "bonnet de douche"]
+
+
+def is_article(p):
+    """A hygiene or personal-care article (not a cosmetic), judged by its categories and name."""
+    text = f" {banlist.norm(p['categories_en'] + ' ' + p['product_name'])} "
+    return any(f" {banlist.norm(t)} " in text for t in ARTICLE_TERMS)
+
+
 def ingredients_text(p):
     """Original label text plus Open Food Facts' English tags, so non-English labels still match.
 
@@ -139,7 +155,12 @@ def init_worker():
 def check(item):
     source, p, extra = item
     packaging = packaging_text(p, extra)
-    if source == "products":
+    if source == "beauty" and is_article(p):
+        # Toothbrushes, pads, wipes, razors... list their materials in the ingredients field, so
+        # check that text as material too: every part must then be a known material.
+        verdict, results, unknown = _matcher.check(ingredients_text(p), packaging, p["ingredients_text"],
+                                                   p["product_name"], p["categories_en"])
+    elif source == "products":
         # Open Products Facts (durable goods) uses the ingredients field for what the item is
         # made of, e.g. 'Edelstahl'. Checking it as material means each part must be a known material.
         verdict, results, unknown = _matcher.check(None, packaging, p["ingredients_text"],
