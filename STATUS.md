@@ -78,18 +78,16 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
    - Publish `site/clean-shelf.html` with it to the same link.
    - Rebuild the website with `site/build_website.py ../scootprogram.github.io`, then push that repo.
 
-## Open items (2026-10-31): saved but NOT published yet
-- Committed, but the page and website still show the previous version:
-  - Generated names for products with no name (brand + type + size, marked "name not recorded").
-  - Food/drink filed as beauty is excluded (`is_food` in `pipeline/build_products.py`).
-- Waiting on the owner:
-  1. Should dietary supplements and over-the-counter medicines (vitamins, fish oil, melatonin, ZzzQuil, antacids; about 80 products) count as food? The current filter excludes them through the `WEAK_FOOD` "dietary supplements" category.
-  2. A redesign with features the owner likes from another site. Build the site's own version; don't copy that site's text, design or branding.
-- To publish once decided: run steps 2 and 7 under "Rebuild steps".
+## Names and food filter (published 2026-10-31)
+- Products with no recorded name get one from brand + type + size, marked "name not recorded" on the page.
+- Food and drink filed as beauty is excluded (`is_food` in `pipeline/build_products.py`).
+- The page now has 416 US products: 1 with packaging verified plastic-free and 415 not verified yet.
+- Open decisions for the owner:
+  1. Dietary supplements and over-the-counter medicines (vitamins, fish oil, melatonin, ZzzQuil, antacids; about 80 products) are currently excluded as food, via the `WEAK_FOOD` "dietary supplements" category. To bring them back, drop that category and rebuild.
+  2. A redesign with features the owner likes from another site (nontoxiclab.com). Build the site's own version; don't copy that site's text, design or branding.
 
 ## US only (2026-10-31)
 - The site only shows products recorded as sold in the United States, because it sells through amazon.com. The filter is in `site/export_json.py`. `products_clean.*` still holds the worldwide list (3,915).
-- The page has 427 products: 1 with packaging verified plastic-free and 426 with packaging not verified yet.
 - Amazon links: "Find on Amazon" searches amazon.com by barcode, with "Amazon by name" (brand plus up to 10 words of the name) as a fallback. Products without a retail barcode get the name search only. All links carry the tag.
 - Why: the owner found barcode searches failing. Most products were sold only in Europe, and amazon.com doesn't list European barcodes.
 - The page's search also matches barcodes.
