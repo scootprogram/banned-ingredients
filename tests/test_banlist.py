@@ -76,6 +76,8 @@ CASES = [
     (None, "none", "glass jar and lid", "EXCLUDED"),                             # a lid of unnamed material
     (None, "none", "stainless steel container, stainless steel lid", "OK"),      # all-steel lid, no liner
     ("Jam", "glass jar, metal lid", None, "EXCLUDED"),                           # jar lids are still lined
+    (None, "none", "glass jar, glass lid, natural rubber seal, stainless steel wire clamp", "OK"),
+    ("Snack", "paper tray, heat seal", None, "EXCLUDED"),                       # a plain seal is still plastic
     (None, "none", "beechwood handle, nylon bristles", "EXCLUDED"),              # a known material doesn't hide plastic
     (None, "none", "stainless steel, silicone lid", "EXCLUDED"),
     ("Мыло", "бумага", "пластик", "EXCLUDED"),                                   # Russian "plastic"
