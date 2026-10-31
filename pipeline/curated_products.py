@@ -10,13 +10,14 @@ List: data/curated_products.csv
   id           barcode (UPC/EAN) when known, else "cs-0001", "cs-0002"...
   status       pending | approved | rejected
   type         household | beauty
+  category     what the product is, for browsing: Straws, Utensils, Towels, Jars...
   name, brand
   materials    what the product is made of, every part with its material, e.g.
                "glass jar, glass lid, natural rubber ring, stainless steel clamps"
                (a bare "lid" or "cap" counts as possible hidden plastic)
   ingredients  for beauty products (leave empty for household)
   packaging    e.g. "cardboard box, paper" (empty = not verified yet)
-  asin         exact Amazon product ID, when verified
+  asin         exact Amazon product ID, when verified; "none" = not sold on Amazon (no Amazon button)
   product_url  the manufacturer's page the details came from
   countries    where it's sold (the site lists "United States" only)
   added_on, notes
@@ -35,7 +36,7 @@ sys.path.insert(0, str(ROOT))
 import banlist  # noqa: E402
 
 PATH = ROOT / "data" / "curated_products.csv"
-FIELDS = ["id", "status", "type", "name", "brand", "materials", "ingredients", "packaging", "asin",
+FIELDS = ["id", "status", "type", "category", "name", "brand", "materials", "ingredients", "packaging", "asin",
           "product_url", "countries", "added_on", "notes"]
 SOURCE = {"household": "products", "beauty": "beauty"}  # the pipeline's source names
 VERDICT_NAMES = {banlist.OK: "ok", banlist.EXCLUDED: "excluded", banlist.UNKNOWN: "unknown"}

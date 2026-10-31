@@ -117,6 +117,9 @@ select {
   background: var(--accent); color: var(--accent-ink);
 }
 .send[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.browse { display: flex; flex-direction: column; gap: 6px; }
+.seg.types button { font-size: 0.8125rem; padding: 4px 10px; }
+.seg.types:empty { display: none; }
 .count { font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
 
 #results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -182,8 +185,11 @@ details.about a { color: var(--accent); }
       <label for="q" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search products</label>
       <input id="q" type="search" placeholder="Search by name, brand, ingredient or barcode" autocomplete="off" spellcheck="false">
     </div>
+    <div class="browse">
+      <div class="seg" id="groups" role="group" aria-label="Browse by material or beauty"></div>
+      <div class="seg types" id="types" role="group" aria-label="What it is"></div>
+    </div>
     <div class="filters">
-      <div class="seg" id="kinds" role="group" aria-label="Product type"></div>
       <div class="seg" id="packs" role="group" aria-label="Packaging"></div>
       <span class="count" id="count" aria-live="polite">Loading products...</span>
     </div>
@@ -224,7 +230,9 @@ details.about a { color: var(--accent); }
   const HELP_FORM = { url: "", entries: { code: "", recyclable: "", nontoxic: "", sustainable: "" } };
   const PAGE = 40;
   const $ = (id) => document.getElementById(id);
-  const state = { q: "", kind: "all", pack: location.hash === "#gaps" ? "u" : "all", shown: PAGE };
+  const state = { q: "", group: "all", type: "all", pack: location.hash === "#gaps" ? "u" : "all", shown: PAGE };
+  // Layer 1: beauty, or what a household product is made of. Layer 2: what it is.
+  const groupsOf = (r) => r.s === "beauty" ? ["Beauty"] : (r.mg && r.mg.length ? r.mg : ["Other household"]);
   let rows = [], meta = {};
 
   const fold = (s) => (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -289,6 +297,7 @@ details.about a { color: var(--accent); }
   // 2. Otherwise a barcode search (amazon.com listings carry the US barcode), plus a name search
   //    only when the name is specific enough to find this product rather than any toothpaste.
   function amazonLinks(r) {
+    if (r.na) return "";  // not sold on Amazon: the maker's page is the only link
     if (r.a) return link(amazonProduct(r.a), "View on Amazon ✓");
     const out = [];
     if (retailBarcode(r.c)) out.push(link(amazonSearch(r.c), "Find on Amazon"));
@@ -335,7 +344,8 @@ details.about a { color: var(--accent); }
   }
 
   function matches(r, words) {
-    if (state.kind !== "all" && r.s !== state.kind) return false;
+    if (state.group !== "all" && !groupsOf(r).includes(state.group)) return false;
+    if (state.type !== "all" && r.t !== state.type) return false;
     if (state.pack !== "all" && r.k !== state.pack) return false;
     return words.every((w) => r._hay.includes(w));
   }
@@ -379,12 +389,46 @@ details.about a { color: var(--accent); }
       `<button type="button" data-${attr}="${k}" aria-pressed="${k === current}">${labels[k]}</button>`).join("");
   }
 
+  function choiceButtons(el, attr, choices, current, allLabel) {
+    el.innerHTML = [["all", allLabel], ...choices.map((c) => [c, c])].map(([v, label]) =>
+      `<button type="button" data-${attr}="${esc(v)}" aria-pressed="${v === current}">${esc(label)}</button>`).join("");
+  }
+
+  const byCount = (values) => Object.entries(values.reduce((m, v) => (m[v] = (m[v] || 0) + 1, m), {}))
+    .sort((a, b) => b[1] - a[1]).map(([v]) => v);
+
+  function setupTypes() {
+    const inGroup = rows.filter((r) => state.group === "all" || groupsOf(r).includes(state.group));
+    const types = byCount(inGroup.map((r) => r.t).filter(Boolean))
+      .sort((a, b) => /^Other/.test(a) - /^Other/.test(b));  // "Other …" last
+    if (state.group === "all" || types.length < 2) { $("types").innerHTML = ""; return; }
+    choiceButtons($("types"), "type", types, state.type, "All types");
+  }
+
   function setupFilters() {
-    segButtons($("kinds"), KIND_LABELS, state.kind, "kind", (k) => rows.some((r) => r.s === k));
+    const groups = byCount(rows.flatMap(groupsOf));
+    const order = ["Beauty", ...groups.filter((g) => g !== "Beauty" && g !== "Other household"), "Other household"];
+    choiceButtons($("groups"), "group", order.filter((g) => groups.includes(g)), state.group, "All");
+    setupTypes();
     segButtons($("packs"), PACK_LABELS, state.pack, "pack", (k) => rows.some((r) => r.k === k));
   }
 
-  for (const [el, key] of [[$("kinds"), "kind"], [$("packs"), "pack"]]) {
+  $("groups").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-group]");
+    if (!b) return;
+    state.group = b.dataset.group; state.type = "all"; state.shown = PAGE;
+    $("groups").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    setupTypes(); render();
+  });
+  $("types").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-type]");
+    if (!b) return;
+    state.type = b.dataset.type; state.shown = PAGE;
+    $("types").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    render();
+  });
+
+  for (const [el, key] of [[$("packs"), "pack"]]) {
     el.addEventListener("click", (e) => {
       const b = e.target.closest(`button[data-${key}]`);
       if (!b) return;

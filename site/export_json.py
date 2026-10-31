@@ -64,7 +64,7 @@ if curated_path.exists():
     import csv
     with open(curated_path, newline="", encoding="utf-8") as f:
         curated = {row["id"]: row for row in csv.DictReader(f) if row.get("status") == "approved"}
-        asins.update({k: r["asin"] for k, r in curated.items() if r.get("asin")})
+        asins.update({k: r["asin"] for k, r in curated.items() if r.get("asin") and r["asin"] != "none"})
 
 # Material names -> the big label shown on the product (design principle: as large as the title).
 MATERIAL_LABELS = [("stainless steel", "STAINLESS STEEL"), ("cast iron", "CAST IRON"), ("natural rubber", "NATURAL RUBBER"),
@@ -88,6 +88,42 @@ def material_labels(materials):
     return labels
 
 
+# Browsing, layer 1: material groups (household), from the material labels.
+MATERIAL_GROUPS = {"STAINLESS STEEL": "Stainless steel & metal", "STEEL": "Stainless steel & metal",
+                   "CAST IRON": "Stainless steel & metal", "ALUMINUM": "Stainless steel & metal",
+                   "COPPER": "Stainless steel & metal", "BRASS": "Stainless steel & metal", "TIN": "Stainless steel & metal",
+                   "WOOD": "Wood & bamboo", "BAMBOO": "Wood & bamboo", "CORK": "Wood & bamboo",
+                   "COTTON": "Cotton & linen", "LINEN": "Cotton & linen", "HEMP": "Cotton & linen", "SILK": "Cotton & linen",
+                   "GLASS": "Glass", "WOOL": "Wool",
+                   "PLANT FIBER": "Natural fibers", "SISAL": "Natural fibers", "JUTE": "Natural fibers",
+                   "COCONUT FIBER": "Natural fibers", "LOOFAH": "Natural fibers", "HORSEHAIR": "Natural fibers",
+                   "CERAMIC": "Ceramic & stone", "PORCELAIN": "Ceramic & stone", "STONEWARE": "Ceramic & stone",
+                   "STONE": "Ceramic & stone"}
+
+# Browsing, layer 2 for beauty: product type from categories and name (first match wins).
+BEAUTY_TYPES = [("Toothpaste", ["toothpaste", "dentifrice", "tooth paste", "zahnpasta"]),
+                ("Mouthwash", ["mouthwash", "mouth wash", "mouth rinse", "rinse"]),
+                ("Deodorant", ["deodorant", "antiperspirant", "deodorante"]),
+                ("Shampoo", ["shampoo", "shampoing"]), ("Conditioner", ["conditioner", "apres shampooing"]),
+                ("Body wash", ["body wash", "shower gel", "bath", "gel douche"]),
+                ("Soap", ["soap", "savon", "seife"]),
+                ("Sunscreen", ["sunscreen", "suncreen", "sun protection", "spf", "solaire"]),
+                ("Makeup", ["makeup", "mascara", "foundation", "lipstick", "eyeshadow", "nail polish", "nail", "concealer"]),
+                ("Lip care", ["lip balm", "lip", "lips", "chapstick"]),
+                ("Supplements & medicine", ["supplement", "supplements", "vitamin", "vitamins", "tablets", "capsules",
+                                            "gummies", "antacid", "medicine", "melatonin", "omega", "probiotic", "collagen"]),
+                ("Lotion & cream", ["lotion", "cream", "creme", "moisturizer", "moisturiser", "butter", "balm"]),
+                ("Hair care", ["hair", "styling", "curl"]), ("Oils", ["oil", "oils"])]
+
+
+def beauty_type(categories, name):
+    text = " " + re.sub(r"[^a-z0-9]+", " ", f"{categories} {name}".lower()) + " "
+    for kind, words in BEAUTY_TYPES:
+        if any(f" {w} " in text for w in words):
+            return kind
+    return "Other beauty"
+
+
 votes_path = root / "data" / "packaging_votes.json"
 votes = json.loads(votes_path.read_text(encoding="utf-8")) if votes_path.exists() else {}
 
@@ -105,6 +141,14 @@ for c, s, n, b, g, w, i, p, u, verdict, qty in db.execute(
         r["cu"] = 1
         if curated[c].get("materials"):
             r["m"] = material_labels(curated[c]["materials"])
+            r["mg"] = list(dict.fromkeys(MATERIAL_GROUPS[m] for m in r["m"] if m in MATERIAL_GROUPS))
+        if curated[c].get("asin") == "none":  # not sold on Amazon: no Amazon button
+            r["na"] = 1
+        r["t"] = curated[c].get("category") or "Other"
+    elif s == "beauty":
+        r["t"] = beauty_type(g, n)
+    else:
+        r["t"] = "Other household"
     if c in asins:
         r["a"] = asins[c]
     if c in votes:

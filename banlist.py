@@ -41,7 +41,7 @@ KNOWN_MATERIALS = ["wool", "tampico", "agave fiber", "sisal", "jute", "hemp", "s
                    "beeswax", "jojoba oil", "tree resin", "pine resin", "rosin", "vegetable oil", "natural rubber",
                    "stainless steel", "cast iron", "carbon steel", "copper", "brass", "borosilicate", "porcelain",
                    "stoneware", "terracotta", "marble", "slate", "stone", "silk", "cashmere", "alpaca", "linen",
-                   "cotton", "lokta paper", "muslin", "clay"]
+                   "cotton", "lokta paper", "muslin", "clay", "oil finish", "terry"]
 NO_PACKAGING = {"none", "no packaging", "unpackaged", "loose", "bulk", "package free", "packaging free"}
 
 # Packaging completeness rules: a part list can name only safe materials and still not
