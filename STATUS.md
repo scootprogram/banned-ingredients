@@ -6,7 +6,7 @@ _Last updated 2026-10-24._
 - `data/curated_products.csv` is a hand-maintained list for products the open databases don't cover, mainly household goods. `pipeline/curated_products.py check | approve <id> | reject <id>` manages it.
   - Every row goes through the same checker. Only **approved** rows are built into the list and published.
   - Name every part with its material ("glass jar, glass lid…"). A bare "lid" or "cap" counts as possible hidden plastic.
-- First 7 candidates were researched from retailer and brand pages and are **pending the owner's approval**: Weck jar, Redecker dish brush, ECOlunchbox Three-in-One and Solo Rectangle, Friendsheep dryer balls, Bee's Wrap, Lodge skillet.
+- First 7 candidates were researched from retailer and brand pages. **Published 2026-10-31 (approved by the owner):** Weck jar, Redecker dish brush, ECOlunchbox Three-in-One and Solo Rectangle, Friendsheep dryer balls, Bee's Wrap. The US page has 481 products, 7 of them household. **Lodge skillet stays pending.**
   - **Lodge:** an informal Target answer says its seasoning oil is soy-based. Soy is banned, so confirm before approving.
   - Barcodes and Amazon IDs are unknown for now (ids `cs-0001`…). Amazon links use the specific name search until IDs are added with `pipeline/amazon_links.py`.
 - **Material labels:** products with listed materials show labels like GLASS / STAINLESS STEEL / WOOL at the **same size as the title** (design principle). `MATERIAL_LABELS` is in `site/export_json.py`.
