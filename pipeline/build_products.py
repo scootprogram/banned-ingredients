@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check every Open Food/Beauty/Products/Pet Facts product against banlist.db.
+"""Check every Open Beauty Facts and Open Products Facts product against banlist.db.
 
 Reads the CSV exports (and the packaging TSVs made by extract_packaging.py) from data/raw/,
 and writes:
@@ -26,11 +26,11 @@ sys.path.insert(0, str(ROOT))
 import banlist  # noqa: E402
 
 RAW = ROOT / "data" / "raw"
+# Food and pet food (Open Food Facts, Open Pet Food Facts) are deliberately left out: the list
+# covers beauty and household products only.
 SOURCES = [  # (source name, CSV export, packaging TSV)
-    ("food", "en.openfoodfacts.org.products.csv.gz", "openfoodfacts.packaging.tsv"),
     ("beauty", "en.openbeautyfacts.org.products.csv.gz", "openbeautyfacts.packaging.tsv"),
     ("products", "en.openproductsfacts.org.products.csv.gz", "openproductsfacts.packaging.tsv"),
-    ("petfood", "en.openpetfoodfacts.org.products.csv.gz", "openpetfoodfacts.packaging.tsv"),
 ]
 COLUMNS = ["code", "url", "product_name", "brands", "categories_en", "countries_en", "ingredients_text",
            "ingredients_tags", "allergens_en", "traces_en", "packaging_en", "image_small_url"]

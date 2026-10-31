@@ -16,11 +16,21 @@ _Last updated 2026-10-24._
 - **Tests**: `python3 tests/test_banlist.py` (28 cases × 2 matchers, all passing).
 - **Trial run** on the first 20,000 rows of each export: 130 of 60,874 products passed. The pipeline works.
 
-## Latest build (2026-10-31, after accuracy fixes)
-- Checked 4,621,274 products:
-  - 5,224 passed (was 16,739 before the fixes)
-  - 1,033,560 excluded
-  - 3,582,490 unknown
+## Scope: beauty and household only (since 2026-10-31)
+Food and pet food were removed at the owner's request:
+- from the page (both tabs and all text)
+- from `products_clean.*`, `needs_packaging.csv` and `data/needs_packaging.json`
+- from the pipeline: `download.sh`, `build_products.py` and `needs_packaging.py` only handle Open Beauty Facts and Open Products Facts.
+
+Earlier versions with food remain in git history. To bring food back, restore the food and pet food entries in those three scripts (commit c7cd3d1 has them), then rebuild.
+
+The food-specific checker rules stay in `banlist.py`. They don't affect beauty products and keep the tests passing.
+
+## Latest build (2026-10-31, beauty and household only)
+- Checked 66,683 products:
+  - 110 passed (97 beauty, 13 household)
+  - 18,926 excluded
+  - 47,647 unknown
 - **Shareable search page**: https://claude.ai/artifact/K9XSaVNM81cksFh63a4wQx (private until shared)
   - Source: `site/clean-shelf.html`
   - Data: `python3 site/export_json.py . <out>/products.json`, then publish with `files`
@@ -41,24 +51,24 @@ _Last updated 2026-10-24._
   - A few products with wrong categories.
   - Canned fish with neither a category nor a meat/fish first ingredient.
 
-## Needs-packaging list (2026-10-31)
-- `python3 pipeline/needs_packaging.py` (about 3 minutes, after `build_products.py`) finds products that pass every ingredient check and are held back only by missing or incomplete packaging details.
-  - 430,882 products are held back this way (197,044 sold in the US).
-  - Each one gets a chance of passing: among products in the same category whose packaging is recorded, the share that pass. Eggs are about 70%, sugar about 35%, sodas near 0.
-  - Ranked US first, then by chance² × (1 + log(scans)), so a likely pass beats a popular long shot.
-- `needs_packaging.csv`: the 30,680 candidates with at least a 10% chance (10,147 in the US).
-- The page's **Help fill the gaps** tab shows the top 2,000 (all US) with what's missing and how to add it in the Open Food Facts app. Link straight to it with `#gaps`.
+## Needs-packaging list
+- `python3 pipeline/needs_packaging.py` (after `build_products.py`) finds products that pass every ingredient check and are held back only by missing or incomplete packaging details.
+  - 3,760 products are held back this way (433 in the US).
+  - Each one gets a chance of passing: among products in the same category whose packaging is recorded, the share that pass.
+  - Beauty products rarely pass. Bar soap is the best category at about 8.5%, so the cutoff is 5%.
+- `needs_packaging.csv`: the 84 candidates at or above 5% (11 in the US), ranked US first, then by chance² × (1 + log(scans)).
+- The page's **Help fill the gaps** tab shows them with what's missing and how to add it on Open Beauty Facts or Open Products Facts. Link straight to it with `#gaps`.
 - Page data: `data/needs_packaging.json`, published as `needs.json` next to `products.json`.
 
 ## Rebuild steps (repeat to refresh)
 1. `bash pipeline/download.sh`
-   - Downloads about 1.5 GB of CSV exports.
-   - Then streams the 13 GB food JSONL to extract packaging, which takes about 20 minutes.
+   - Downloads about 25 MB of CSV exports.
+   - Then streams the beauty and household JSONL exports to extract packaging (a few minutes).
    - Re-running skips files that are already complete. A broken connection fails loudly instead of leaving a truncated file.
 2. `python3 pipeline/build_products.py`
-   - Takes about 7 minutes for roughly 4.6 million products.
+   - Takes under a minute for about 67,000 products.
    - Writes `products_clean.db` and `products_clean.csv`.
-3. `python3 pipeline/needs_packaging.py` refreshes the to-do list (about 3 minutes).
+3. `python3 pipeline/needs_packaging.py` refreshes the to-do list (seconds).
 4. Spot-check a random sample of OK products for anything that slipped through.
 5. Run `python3 tests/test_banlist.py`.
 6. Update the page:

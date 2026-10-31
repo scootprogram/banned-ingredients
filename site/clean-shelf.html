@@ -154,7 +154,7 @@ details.about a { color: var(--accent); }
 <div class="wrap">
   <header>
     <h1>Clean Shelf</h1>
-    <p class="lede">Products with none of the ingredients below and no plastic anywhere: not in the product, not in the packaging, not in the caps, linings or labels. Each one links to an Amazon search and its full record.</p>
+    <p class="lede">Beauty and household products with none of the ingredients below and no plastic anywhere: not in the product, not in the packaging, not in the caps, pumps, linings or labels. Each one links to an Amazon search and its full record.</p>
     <ul class="rules" id="rules" aria-label="What's excluded"></ul>
   </header>
 
@@ -164,11 +164,11 @@ details.about a { color: var(--accent); }
   </div>
 
   <div class="intro" id="gaps-intro" hidden>
-    <p>These products pass every ingredient check but can't be listed yet, because nobody has recorded what their packaging is made of. Adding it takes about a minute, and every product you fill in is checked again in the next update.</p>
+    <p>These products pass every ingredient check but can't be listed yet, because nobody has recorded what their packaging is made of. Most beauty products come in plastic tubes, pumps or jars, so these are long shots; bar soap is the most likely to pass. Every product you fill in is checked again in the next update.</p>
     <ol>
-      <li>Install the free Open Food Facts app and scan the product's barcode, or open its record from the link below.</li>
+      <li>Open the product's record from the link below (Open Beauty Facts or Open Products Facts) and sign in.</li>
       <li>Choose <b>Edit</b>, then <b>Packaging</b>.</li>
-      <li>Add every part with its material, including the cap or lid: for example "jar: glass", "lid: metal", "label: paper".</li>
+      <li>Add every part with its material, including the cap, lid or pump: for example "box: cardboard", "wrapper: paper", "jar: glass", "lid: metal".</li>
     </ol>
   </div>
 
@@ -190,23 +190,23 @@ details.about a { color: var(--accent); }
 
   <details class="about">
     <summary>How this list is made</summary>
-    <p>Every product in Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts was checked against the ban list. A product appears here only if its ingredients were checked and every packaging part listed for it is a known plastic-free material. Anything unclear is left out, for example:</p>
+    <p>Every beauty and household product in Open Beauty Facts and Open Products Facts was checked against the ban list. A product appears here only if its ingredients or materials were checked and every packaging part listed for it is a known plastic-free material. Anything unclear is left out, for example:</p>
     <ul>
       <li>a jar or bottle listed without its lid or cap (lids are usually plastic-lined)</li>
-      <li>metal cans, tins and trays, which are lined or lacquered with plastic</li>
-      <li>drinks, wet foods and fresh meat or fish listed only as "paper" or "cardboard", since the inner carton, tray or pot isn't listed</li>
-      <li>cereals, biscuits, snacks and sweets in a box, which nearly always have an inner bag or wrapper</li>
-      <li>frozen and canned food, and anything named as tea bags, capsules, sachets or pouches</li>
+      <li>tubes, pumps, sprays, droppers and applicators</li>
+      <li>metal tins and cans, which are lined or lacquered with plastic</li>
+      <li>liquids and creams listed only as "paper" or "cardboard", since the bottle or jar inside isn't listed</li>
+      <li>anything named as sachets, capsules or pouches</li>
     </ul>
-    <p>The list depends on what volunteers recorded. If a record leaves out a part of the packaging (for example the bag inside a box), the product can still appear here, so check the label before you buy.</p>
+    <p>The list depends on what volunteers recorded. If a record leaves out a part of the packaging (for example the wrapper inside a box), the product can still appear here, so check the label before you buy.</p>
     <p id="built"></p>
-    <p>Product data © Open Food Facts contributors, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>.</p>
+    <p>Product data © Open Beauty Facts and Open Products Facts contributors, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>.</p>
   </details>
 </div>
 
 <script>
 (() => {
-  const KIND_LABELS = { all: "All", food: "Food", beauty: "Beauty", products: "Household", petfood: "Pet food" };
+  const KIND_LABELS = { all: "All", beauty: "Beauty", products: "Household" };
   const PAGE = 40;
   const $ = (id) => document.getElementById(id);
   const state = { view: "clean", q: "", kind: "all", country: "", loose: false, shown: PAGE };

@@ -7,7 +7,7 @@ Ranks them US first, then by how likely their category is to be plastic-free and
 people scan them. Reads data/products.db (from build_products.py) and the CSV exports.
 
 Writes:
-  needs_packaging.csv        every candidate with at least a 10% chance of passing, best first
+  needs_packaging.csv        every candidate with at least a 5% chance of passing, best first
   data/needs_packaging.json  the top candidates, for the Clean Shelf page
 
 Usage: python3 pipeline/needs_packaging.py [--page-limit 2000]
@@ -25,11 +25,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
-CSV_EXPORTS = {"food": "en.openfoodfacts.org.products.csv.gz", "beauty": "en.openbeautyfacts.org.products.csv.gz",
-               "products": "en.openproductsfacts.org.products.csv.gz", "petfood": "en.openpetfoodfacts.org.products.csv.gz"}
+CSV_EXPORTS = {"beauty": "en.openbeautyfacts.org.products.csv.gz",
+               "products": "en.openproductsfacts.org.products.csv.gz"}
 PLASTIC_BANS = {"plastic", "hidden-plastic", "plastic-like"}
 MIN_SUPPORT = 30  # products with known packaging a category needs before its pass rate is trusted
-MIN_CHANCE = 0.10  # below this a category almost never passes (sodas, snacks): not worth a contributor's time
+# Below this a category almost never passes: not worth a contributor's time. Beauty and household
+# products rarely pass (tubes, pumps, plastic jars); bar soap is the best at about 8%.
+MIN_CHANCE = 0.05
 
 # Reasons that adding packaging details can resolve, and how to describe the gap to a contributor.
 FIXABLE = {
