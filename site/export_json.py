@@ -57,6 +57,37 @@ if links_path.exists():
     import csv
     with open(links_path, newline="", encoding="utf-8") as f:
         asins = {row["code"]: row["asin"] for row in csv.DictReader(f) if row.get("asin")}
+# Curated products (pipeline/curated_products.py): their Amazon IDs and materials.
+curated = {}
+curated_path = root / "data" / "curated_products.csv"
+if curated_path.exists():
+    import csv
+    with open(curated_path, newline="", encoding="utf-8") as f:
+        curated = {row["id"]: row for row in csv.DictReader(f) if row.get("status") == "approved"}
+        asins.update({k: r["asin"] for k, r in curated.items() if r.get("asin")})
+
+# Material names -> the big label shown on the product (design principle: as large as the title).
+MATERIAL_LABELS = [("stainless steel", "STAINLESS STEEL"), ("cast iron", "CAST IRON"), ("natural rubber", "NATURAL RUBBER"),
+                   ("glass", "GLASS"), ("steel", "STEEL"), ("aluminum", "ALUMINUM"), ("aluminium", "ALUMINUM"),
+                   ("copper", "COPPER"), ("brass", "BRASS"), ("tin", "TIN"), ("ceramic", "CERAMIC"),
+                   ("porcelain", "PORCELAIN"), ("stoneware", "STONEWARE"), ("bamboo", "BAMBOO"), ("wood", "WOOD"),
+                   ("beech", "WOOD"), ("cotton", "COTTON"), ("linen", "LINEN"), ("hemp", "HEMP"), ("wool", "WOOL"),
+                   ("sisal", "SISAL"), ("jute", "JUTE"), ("coconut fiber", "COCONUT FIBER"), ("coir", "COCONUT FIBER"),
+                   ("tampico", "PLANT FIBER"), ("horsehair", "HORSEHAIR"), ("loofah", "LOOFAH"), ("cork", "CORK"),
+                   ("paper", "PAPER"), ("beeswax", "BEESWAX"), ("stone", "STONE"), ("silk", "SILK")]
+
+
+def material_labels(materials):
+    text, labels = f" {(materials or '').lower()} ", []
+    for word, label in MATERIAL_LABELS:
+        if re.search(rf"\b{re.escape(word)}", text) and label not in labels:
+            if label == "STEEL" and "STAINLESS STEEL" in labels:
+                continue
+            labels.append(label)
+            text = text.replace(word, " ")
+    return labels
+
+
 votes_path = root / "data" / "packaging_votes.json"
 votes = json.loads(votes_path.read_text(encoding="utf-8")) if votes_path.exists() else {}
 
@@ -70,6 +101,10 @@ for c, s, n, b, g, w, i, p, u, verdict, qty in db.execute(
              k="v" if verdict == "ok" else "u")
     if not r["n"]:  # no recorded name: build one, and mark it as built
         r["n"], r["nn"] = generated_name(b, g, qty), 1
+    if c in curated:
+        r["cu"] = 1
+        if curated[c].get("materials"):
+            r["m"] = material_labels(curated[c]["materials"])
     if c in asins:
         r["a"] = asins[c]
     if c in votes:

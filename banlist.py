@@ -33,6 +33,15 @@ FILLER_WORDS = {"recyclable", "recycled", "fsc", "certified", "eco", "sustainabl
                 "100", "percent", "pure", "natural", "organic", "new", "the", "a", "of", "with", "en",
                 "recyclable", "recyclables", "recycle", "recyclage", "recyclabel", "recycelbar", "recyclebar",
                 "reciclable", "riciclabile", "de", "en", "et", "und", "y", "e", "di", "da", "van", "het"}
+# Natural materials the taxonomy doesn't know, so they count as identified in packaging/material
+# text. This only answers "is this a known material?"; every ban still applies.
+KNOWN_MATERIALS = ["wool", "tampico", "agave fiber", "sisal", "jute", "hemp", "seagrass", "rattan", "wicker", "willow",
+                   "horsehair", "horse hair", "boar bristle", "beechwood", "beech", "oak", "maple", "walnut", "acacia",
+                   "teak", "olive wood", "cherry wood", "bamboo", "loofah", "luffa", "coir", "coconut fiber",
+                   "beeswax", "jojoba oil", "tree resin", "pine resin", "rosin", "vegetable oil", "natural rubber",
+                   "stainless steel", "cast iron", "carbon steel", "copper", "brass", "borosilicate", "porcelain",
+                   "stoneware", "terracotta", "marble", "slate", "stone", "silk", "cashmere", "alpaca", "linen",
+                   "cotton", "lokta paper", "muslin", "clay"]
 NO_PACKAGING = {"none", "no packaging", "unpackaged", "loose", "bulk", "package free", "packaging free"}
 
 # Packaging completeness rules: a part list can name only safe materials and still not
@@ -477,7 +486,8 @@ class Matcher:
                 p = norm(phrase)
                 words = p.split()
                 is_claim = bool(words) and (words[0] in NEGATIONS or words[-1] == "free")  # "sans plastique", "plastic free"
-                identified = bool(hits or [n for n in nodes if n != "en:unknown"] or p in NO_PACKAGING or is_claim
+                known = field != "ingredients" and any(f" {m} " in f" {p} " for m in KNOWN_MATERIALS)
+                identified = bool(hits or [n for n in nodes if n != "en:unknown"] or p in NO_PACKAGING or is_claim or known
                                   or all(w in FILLER_WORDS for w in words))
                 results.append((phrase, nodes, hits, is_trace, identified))
         return results

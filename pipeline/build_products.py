@@ -255,6 +255,24 @@ def main():
                 print(f"\r  {n:,} products checked ({rate:,.0f}/s)  " +
                       "  ".join(f"{k}={v:,}" for k, v in sorted(counts.items())), end="", file=sys.stderr)
     out.executemany("INSERT OR REPLACE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", batch)
+
+    # Approved curated products (data/curated_products.csv), checked like everything else.
+    import curated_products
+    curated_db = sqlite3.connect(f"file:{banlist.DB_PATH}?mode=ro", uri=True)
+    curated_db.row_factory = sqlite3.Row
+    matcher = banlist.MemoryMatcher(curated_db)
+    curated = []
+    for r in curated_products.read():
+        if r["status"] != "approved":
+            continue
+        verdict, banned, unknown = curated_products.check_row(matcher, r)
+        counts[verdict] = counts.get(verdict, 0) + 1
+        curated.append((r["id"], curated_products.SOURCE.get(r["type"], "products"), r["name"], r["brand"],
+                        f"Curated,{r['type']}", r["countries"] or "United States",
+                        r["ingredients"] or r["materials"], r["packaging"], verdict, ",".join(banned),
+                        "; ".join(unknown), r["product_url"], "", "", ""))
+    out.executemany("INSERT OR REPLACE INTO products VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", curated)
+    print(f"  curated: {len(curated)} approved product(s) checked", file=sys.stderr)
     out.execute("CREATE INDEX idx_verdict ON products (verdict)")
     out.commit()
     print(file=sys.stderr)

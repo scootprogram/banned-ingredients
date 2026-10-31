@@ -2,6 +2,18 @@
 
 _Last updated 2026-10-24._
 
+## Curated products (2026-10-31)
+- `data/curated_products.csv` is a hand-maintained list for products the open databases don't cover, mainly household goods. `pipeline/curated_products.py check | approve <id> | reject <id>` manages it.
+  - Every row goes through the same checker. Only **approved** rows are built into the list and published.
+  - Name every part with its material ("glass jar, glass lid…"). A bare "lid" or "cap" counts as possible hidden plastic.
+- First 7 candidates were researched from retailer and brand pages and are **pending the owner's approval**: Weck jar, Redecker dish brush, ECOlunchbox Three-in-One and Solo Rectangle, Friendsheep dryer balls, Bee's Wrap, Lodge skillet.
+  - **Lodge:** an informal Target answer says its seasoning oil is soy-based. Soy is banned, so confirm before approving.
+  - Barcodes and Amazon IDs are unknown for now (ids `cs-0001`…). Amazon links use the specific name search until IDs are added with `pipeline/amazon_links.py`.
+- **Material labels:** products with listed materials show labels like GLASS / STAINLESS STEEL / WOOL at the **same size as the title** (design principle). `MATERIAL_LABELS` is in `site/export_json.py`.
+- `KNOWN_MATERIALS` in `banlist.py` lists natural materials (wool, tampico, beechwood, jojoba oil, tree resin…) so they count as identified. Bans still apply.
+- "Stainless steel lid" is an exception to hidden-plastic (an all-steel lid, no liner). Tinplate jar lids stay flagged.
+- Tested end to end in a test copy: household goes from 1 to 8 products, labels match the title size, no errors.
+
 ## False matches fixed (2026-10-31)
 - About 3,200 products were wrongly excluded. On the US page this is 56 products, mostly toothpastes and lotions (419 to 475).
   - "…glutamate" surfactants and chelators (sodium cocoyl glutamate, tetrasodium glutamate diacetate) were read as MSG. Fixed with exceptions on `msg`; real MSG and "sodium glutamate" are still caught.

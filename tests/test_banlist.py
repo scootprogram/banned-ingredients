@@ -70,6 +70,14 @@ CASES = [
     ("Aqua, Monosodium Glutamate", "glass jar, glass lid", None, "EXCLUDED"),     # real MSG still caught
     ("Aqua, Hydrolyzed Milk Protein", "glass jar, glass lid", None, "EXCLUDED"),  # real dairy still caught
     ("Crème colorante, aqua", "glass jar, glass lid", None, "OK"),               # cosmetic cream, not dairy
+    (None, "lokta paper bag", "100% New Zealand wool", "OK"),                    # known natural material
+    (None, "none", "beechwood handle, tampico fiber bristles", "OK"),
+    (None, "none", "glass jar, glass lid, natural rubber ring, stainless steel clamps", "OK"),
+    (None, "none", "glass jar and lid", "EXCLUDED"),                             # a lid of unnamed material
+    (None, "none", "stainless steel container, stainless steel lid", "OK"),      # all-steel lid, no liner
+    ("Jam", "glass jar, metal lid", None, "EXCLUDED"),                           # jar lids are still lined
+    (None, "none", "beechwood handle, nylon bristles", "EXCLUDED"),              # a known material doesn't hide plastic
+    (None, "none", "stainless steel, silicone lid", "EXCLUDED"),
     ("Мыло", "бумага", "пластик", "EXCLUDED"),                                   # Russian "plastic"
 ]
 
