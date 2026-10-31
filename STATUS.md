@@ -81,6 +81,15 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
 - Products without a usable barcode keep the name search.
 - This is done on the page itself, in `amazonLinks` in `site/clean-shelf.html`.
 
+## Website: https://scootprogram.github.io (since 2026-10-31)
+- Public GitHub Pages site in the separate repo `scootprogram/scootprogram.github.io`. It holds only the page and its two data files, so no food history is public.
+- Built from this repo with `python3 site/build_website.py ../scootprogram.github.io`, then commit and push in that repo.
+- This is the site entered for the Amazon Associates application. Amazon rejected the claude.ai link because it isn't a site the owner controls.
+- The page shows Amazon's required disclosure: "As an Amazon Associate I earn from qualifying purchases."
+- When the Associates tracking ID arrives (e.g. `cleanshelf-20`):
+  1. Set `AMAZON_TAG` in `site/clean-shelf.html`.
+  2. Rebuild the website and republish the Claude page.
+
 ## Ideas not started yet
 - A personal verification list (products you've checked yourself) that overrides the database.
 - A monthly automatic rebuild that updates the page.

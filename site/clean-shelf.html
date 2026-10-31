@@ -53,6 +53,7 @@ h1 {
   line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.01em;
 }
 .lede { margin: 0; color: var(--muted); max-width: 62ch; }
+.disclosure { margin: 0; font-size: 0.8125rem; color: var(--muted); }
 .rules { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
 .rules li {
   font-size: 0.8125rem; padding: 2px 10px; border-radius: 999px;
@@ -156,6 +157,7 @@ details.about a { color: var(--accent); }
     <h1>Clean Shelf</h1>
     <p class="lede">Beauty and household products with none of the ingredients below and no plastic anywhere: not in the product, not in the packaging, not in the caps, pumps, linings or labels. Each one links to an Amazon search and its full record.</p>
     <ul class="rules" id="rules" aria-label="What's excluded"></ul>
+    <p class="disclosure">As an Amazon Associate I earn from qualifying purchases.</p>
   </header>
 
   <div class="views" role="tablist" aria-label="View">
@@ -237,9 +239,13 @@ details.about a { color: var(--accent); }
     return out + esc(text.slice(pos));
   }
 
+  // Amazon Associates tracking ID (e.g. "cleanshelf-20"). Empty until the account is approved.
+  const AMAZON_TAG = "";
+  const amazonSearch = (q) => "https://www.amazon.com/s?k=" + encodeURIComponent(q) +
+    (AMAZON_TAG ? "&tag=" + encodeURIComponent(AMAZON_TAG) : "");
+
   function amazonUrl(r) {
-    const q = [(r.b || "").split(",")[0].trim(), r.n].filter(Boolean).join(" ") || r.c;
-    return "https://www.amazon.com/s?k=" + encodeURIComponent(q);
+    return amazonSearch([(r.b || "").split(",")[0].trim(), r.n].filter(Boolean).join(" ") || r.c);
   }
 
   // A real retail barcode (UPC/EAN), not a store's in-house code (those start with 2).
@@ -250,7 +256,7 @@ details.about a { color: var(--accent); }
   function amazonLinks(r) {
     const byName = `<a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Amazon by name</a>`;
     if (!retailBarcode(r.c)) return `<a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>`;
-    const byCode = "https://www.amazon.com/s?k=" + encodeURIComponent(r.c);
+    const byCode = amazonSearch(r.c);
     return `<a href="${esc(byCode)}" target="_blank" rel="noopener">Find on Amazon</a>${byName}`;
   }
 
