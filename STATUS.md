@@ -78,6 +78,13 @@ The food-specific checker rules stay in `banlist.py`. They don't affect beauty p
    - Publish `site/clean-shelf.html` with it to the same link.
    - Rebuild the website with `site/build_website.py ../scootprogram.github.io`, then push that repo.
 
+## US only (2026-10-31)
+- The site only shows products recorded as sold in the United States, because it sells through amazon.com. The filter is in `site/export_json.py`. `products_clean.*` still holds the worldwide list (3,915).
+- The page has 427 products: 1 with packaging verified plastic-free and 426 with packaging not verified yet.
+- Amazon links: "Find on Amazon" searches amazon.com by barcode, with "Amazon by name" (brand plus up to 10 words of the name) as a fallback. Products without a retail barcode get the name search only. All links carry the tag.
+- Why: the owner found barcode searches failing. Most products were sold only in Europe, and amazon.com doesn't list European barcodes.
+- The page's search also matches barcodes.
+
 ## Plastic in other languages (2026-10-31)
 - Found when a Russian toothbrush (7640168930479) was listed. Its materials, "polypropylene, thermoplastic elastomer, polybutylene terephthalate", were only matched in English.
 - Plastic and silicone names were added in Russian, French, German, Spanish, Italian, Polish, Dutch and Scandinavian languages.

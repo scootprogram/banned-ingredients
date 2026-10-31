@@ -166,7 +166,7 @@ details.about a { color: var(--accent); }
 <div class="wrap">
   <header>
     <h1>Clean Shelf</h1>
-    <p class="lede">Beauty and household products made without any of the ingredients below. Each product is marked by what we know about its packaging: verified free of plastic, or not verified yet. Each one links to Amazon and to its full record.</p>
+    <p class="lede">Beauty and household products sold in the US, made without any of the ingredients below. Each product is marked by what we know about its packaging: verified free of plastic, or not verified yet. Each one links to Amazon and to its full record.</p>
     <ul class="rules" id="rules" aria-label="What's excluded"></ul>
     <p class="disclosure">As an Amazon Associate I earn from qualifying purchases.</p>
   </header>
@@ -174,12 +174,11 @@ details.about a { color: var(--accent); }
   <div class="controls" role="search">
     <div class="search">
       <label for="q" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search products</label>
-      <input id="q" type="search" placeholder="Search by name, brand, category or ingredient" autocomplete="off" spellcheck="false">
+      <input id="q" type="search" placeholder="Search by name, brand, ingredient or barcode" autocomplete="off" spellcheck="false">
     </div>
     <div class="filters">
       <div class="seg" id="kinds" role="group" aria-label="Product type"></div>
       <div class="seg" id="packs" role="group" aria-label="Packaging"></div>
-      <select id="country" aria-label="Sold in"></select>
       <span class="count" id="count" aria-live="polite">Loading products...</span>
     </div>
   </div>
@@ -189,7 +188,7 @@ details.about a { color: var(--accent); }
 
   <details class="about">
     <summary>How this list is made</summary>
-    <p>Every beauty and household product in Open Beauty Facts and Open Products Facts was checked against the list above. Only products whose ingredients (or, for household items, materials) pass every check appear here.</p>
+    <p>Every beauty and household product in Open Beauty Facts and Open Products Facts was checked against the list above. Only products sold in the US whose ingredients (or, for household items, materials) pass every check appear here.</p>
     <p><b>Packaging verified plastic-free</b> means every packaging part recorded for the product is a known plastic-free material. Anything unclear keeps a product out of this group, for example:</p>
     <ul>
       <li>a jar or bottle listed without its lid or cap (lids are usually plastic-lined)</li>
@@ -219,7 +218,7 @@ details.about a { color: var(--accent); }
   const HELP_FORM = { url: "", entries: { code: "", recyclable: "", nontoxic: "", sustainable: "" } };
   const PAGE = 40;
   const $ = (id) => document.getElementById(id);
-  const state = { q: "", kind: "all", pack: location.hash === "#gaps" ? "u" : "all", country: "", shown: PAGE };
+  const state = { q: "", kind: "all", pack: location.hash === "#gaps" ? "u" : "all", shown: PAGE };
   let rows = [], meta = {};
 
   const fold = (s) => (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -246,25 +245,27 @@ details.about a { color: var(--accent); }
     return out + esc(text.slice(pos));
   }
 
-  // Amazon Associates tracking ID.
+  // Amazon Associates tracking ID (amazon.com).
   const AMAZON_TAG = "cleanshelf01-20";
   const amazonSearch = (q) => "https://www.amazon.com/s?k=" + encodeURIComponent(q) +
     (AMAZON_TAG ? "&tag=" + encodeURIComponent(AMAZON_TAG) : "");
 
-  function amazonUrl(r) {
-    return amazonSearch([(r.b || "").split(",")[0].trim(), r.n].filter(Boolean).join(" ") || r.c);
+  // Brand + name, kept short: long exact names find less than a few distinctive words.
+  function nameQuery(r) {
+    const words = [(r.b || "").split(",")[0].trim(), r.n || ""].join(" ").split(/\s+/).filter(Boolean);
+    return words.slice(0, 10).join(" ") || r.c;
   }
 
   // A real retail barcode (UPC/EAN), not a store's in-house code (those start with 2).
   const retailBarcode = (c) => /^(\d{8}|\d{12,14})$/.test(c || "") && !/^0?2/.test(c);
+  const link = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>`;
 
-  // Most Amazon listings carry the product's UPC, so a barcode search often lands on the exact
-  // item. The name search stays as a fallback for when it finds nothing.
+  // Every product here is sold in the US, and amazon.com listings carry the US barcode, so a
+  // barcode search often lands on the exact item. The name search is the fallback.
   function amazonLinks(r) {
-    const byName = `<a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Amazon by name</a>`;
-    if (!retailBarcode(r.c)) return `<a href="${esc(amazonUrl(r))}" target="_blank" rel="noopener">Find on Amazon</a>`;
-    const byCode = amazonSearch(r.c);
-    return `<a href="${esc(byCode)}" target="_blank" rel="noopener">Find on Amazon</a>${byName}`;
+    return retailBarcode(r.c)
+      ? link(amazonSearch(r.c), "Find on Amazon") + link(amazonSearch(nameQuery(r)), "Amazon by name")
+      : link(amazonSearch(nameQuery(r)), "Find on Amazon");
   }
 
   const chips = (p) => [...new Set((p || "").split(/[;,]/)
@@ -308,7 +309,6 @@ details.about a { color: var(--accent); }
   function matches(r, words) {
     if (state.kind !== "all" && r.s !== state.kind) return false;
     if (state.pack !== "all" && r.k !== state.pack) return false;
-    if (state.country && !(r.w || "").split(",").includes(state.country)) return false;
     return words.every((w) => r._hay.includes(w));
   }
 
@@ -353,11 +353,6 @@ details.about a { color: var(--accent); }
   function setupFilters() {
     segButtons($("kinds"), KIND_LABELS, state.kind, "kind", (k) => rows.some((r) => r.s === k));
     segButtons($("packs"), PACK_LABELS, state.pack, "pack", (k) => rows.some((r) => r.k === k));
-    const counts = {};
-    rows.forEach((r) => (r.w || "").split(",").filter(Boolean).forEach((c) => (counts[c] = (counts[c] || 0) + 1)));
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 40);
-    $("country").innerHTML = `<option value="">Sold anywhere</option>` +
-      top.map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n.toLocaleString()})</option>`).join("");
   }
 
   for (const [el, key] of [[$("kinds"), "kind"], [$("packs"), "pack"]]) {
@@ -369,7 +364,6 @@ details.about a { color: var(--accent); }
       render();
     });
   }
-  $("country").addEventListener("change", (e) => { state.country = e.target.value; state.shown = PAGE; render(); });
 
   $("results").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-help]");
@@ -400,7 +394,7 @@ details.about a { color: var(--accent); }
     return r.json();
   }).then((json) => {
     meta = json.meta; rows = json.products;
-    rows.forEach((r) => (r._hay = fold([r.n, r.b, r.g, r.i].join(" "))));
+    rows.forEach((r) => (r._hay = fold([r.n, r.b, r.g, r.i, r.c].join(" "))));  // barcode too
     $("rules").innerHTML = meta.bans.map((b) => `<li>${esc(b)}</li>`).join("");
     const verified = rows.filter((r) => r.k === "v").length;
     $("built").textContent = `Checked ${Number(meta.checked).toLocaleString()} products on ${meta.built}: ` +
