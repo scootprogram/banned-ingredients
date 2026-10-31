@@ -84,6 +84,9 @@ CASES = [
     (None, "none", "untreated beechwood handle, tampico fiber bristles", "OK"),
     (None, "none", "beechwood handle, nylon bristles", "EXCLUDED"),              # a known material doesn't hide plastic
     (None, "none", "stainless steel, silicone lid", "EXCLUDED"),
+    (None, "none", "natural loofah, cellulose sponge, cotton stitching", "EXCLUDED"),  # owner rule: cellulose banned
+    (None, "none", "swedish dishcloth", "EXCLUDED"),
+    ("Sodium carbonate, microcrystalline cellulose", "glass jar, glass lid", None, "OK"),  # a powder ingredient, not a sponge
     ("Мыло", "бумага", "пластик", "EXCLUDED"),                                   # Russian "plastic"
 ]
 

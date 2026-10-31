@@ -4,35 +4,31 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a single search column, like a shop's stock ledger. Results are rows, not tiles,
-   so packaging and ingredients can be read side by side. */
+/* Theme: kraft-box brown on every screen, in light and dark mode alike. The product swatch is
+   the box itself (tan kraft, printed in dark ink); the green is the bottle-glass accent. */
 :root {
-  --bg: #f3f5f2;          /* paper with a faint glass-green cast */
-  --surface: #ffffff;
-  --ink: #1b2420;
-  --muted: #5c6a63;
-  --line: #d9e0db;
-  --accent: #1f5f4a;      /* bottle-glass green */
-  --accent-ink: #ffffff;
-  --kraft: #8a6a3d;       /* kraft-paper brown for packaging chips */
-  --kraft-bg: #f1e8da;
-  --focus: #2f7d63;
+  --bg: #3a2819;          /* dark kraft-box brown */
+  --surface: #47321f;     /* card: a shade lighter */
+  --ink: #f6eee2;         /* cream print */
+  --muted: #d2bfa5;
+  --line: #5e4530;
+  --accent: #8fd4b2;      /* bottle-glass green, lit for a dark background */
+  --accent-ink: #1d140b;
+  --kraft: #e7c896;       /* packaging chips */
+  --kraft-bg: #5a3f28;
+  --box: #d4b48a;         /* swatch: tan kraft board */
+  --box-ink: #2a1c10;
+  --box-accent: #174a39;
+  --focus: #b7ead0;
   --font-display: "Young Serif", Georgia, "Times New Roman", serif;
   --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #121815; --surface: #1a221e; --ink: #e4ebe6; --muted: #9aaba2; --line: #2c3833;
-    --accent: #6cc3a0; --accent-ink: #0d1a14; --kraft: #d9b47e; --kraft-bg: #2e2619; --focus: #8fd8ba;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #121815; --surface: #1a221e; --ink: #e4ebe6; --muted: #9aaba2; --line: #2c3833;
-  --accent: #6cc3a0; --accent-ink: #0d1a14; --kraft: #d9b47e; --kraft-bg: #2e2619; --focus: #8fd8ba;
   color-scheme: dark;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #3a2819; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #3a2819; color-scheme: dark; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -132,7 +128,7 @@ select {
 }
 .item > * { min-width: 0; }
 .swatch {
-  position: relative; background: var(--kraft-bg); min-height: 132px; padding: 28px 16px 16px;
+  position: relative; background: var(--box); color: var(--box-ink); min-height: 132px; padding: 28px 16px 16px;
   display: flex; align-items: center; justify-content: center; text-align: center;
 }
 .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
@@ -141,15 +137,15 @@ select {
 .name, .materials, .ingredients, .swatch-type { font-size: 1.0625rem; line-height: 1.3; }
 .name { font-family: var(--font-display); margin: 0; overflow-wrap: anywhere; }
 .materials { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; margin: 0;
-  font-family: var(--font-display); letter-spacing: 0.04em; color: var(--accent); }
-.materials span + span::before { content: "+ "; color: var(--muted); }
-.swatch-type { font-family: var(--font-display); color: var(--kraft); margin: 0; }
+  font-family: var(--font-display); letter-spacing: 0.04em; color: var(--box-accent); }
+.materials span + span::before { content: "+ "; color: var(--box-ink); opacity: 0.6; }
+.swatch-type { font-family: var(--font-display); color: var(--box-ink); margin: 0; }
 .nn { font-family: var(--font-body); font-size: 0.75rem; color: var(--muted); font-weight: 400; white-space: nowrap; }
 .brand { color: var(--muted); font-size: 0.9375rem; overflow-wrap: anywhere; }
 .kind {
   position: absolute; top: 10px; left: 10px;
   font-family: var(--font-mono); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--kraft); border: 1px solid color-mix(in srgb, var(--kraft) 40%, transparent); border-radius: 4px; padding: 1px 6px;
+  color: var(--box-ink); border: 1px solid color-mix(in srgb, var(--box-ink) 45%, transparent); border-radius: 4px; padding: 1px 6px;
 }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip {

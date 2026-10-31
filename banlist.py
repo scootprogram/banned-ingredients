@@ -36,7 +36,7 @@ FILLER_WORDS = {"recyclable", "recycled", "fsc", "certified", "eco", "sustainabl
 # Natural materials the taxonomy doesn't know, so they count as identified in packaging/material
 # text. This only answers "is this a known material?"; every ban still applies.
 KNOWN_MATERIALS = ["wool", "tampico", "agave fiber", "sisal", "jute", "hemp", "seagrass", "rattan", "wicker", "willow",
-                   "horsehair", "horse hair", "boar bristle", "beechwood", "beech", "oak", "maple", "walnut", "acacia",
+                   "horsehair", "horse hair", "boar bristle", "boar bristles", "palm fiber", "coconut husk", "titanium", "beechwood", "beech", "oak", "maple", "walnut", "acacia",
                    "teak", "olive wood", "cherry wood", "bamboo", "loofah", "luffa", "coir", "coconut fiber",
                    "beeswax", "jojoba oil", "tree resin", "pine resin", "rosin", "vegetable oil", "natural rubber",
                    "stainless steel", "cast iron", "carbon steel", "copper", "brass", "borosilicate", "porcelain",
