@@ -14,6 +14,10 @@ _Last updated 2026-10-24._
   - **Published 2026-10-31 (owner approved):** `cs-0008` Package Free stainless steel straw (100% steel, package-free, not on Amazon; Amazon straw sets found include nylon brushes or silicone tips) and `cs-0010` Rawganique Bremington towels (100% organic cotton with cotton thread).
   - **On hold:** `cs-0009` Bambu bamboo utensils (one piece, no glue or lacquer, but the finish oil isn't named and could be soy) and `cs-0007` Lodge skillet (seasoning oil possibly soy).
   - The US page has 483 products, 9 of them household.
+- **Glass round (published 2026-10-31, owner approved):** Duralex Picardie tumblers (B0017LR21Q), Le Parfait Super jars 500 ml 6-pack (B07MKS2G6H), Pyrex 3-piece mixing bowls without lids (B00004SZ7H), IKEA 365+ carafe with cork stopper (not on Amazon).
+  - Glass group: 5 products. US page: 487 products, 13 household.
+  - Ruled out: Eva Solo carafe (silicone in stopper), Schott Zwiesel Fresca ("glass" is Tritan plastic), lidded Pyrex (plastic lids), glass straws (cleaning-brush bristle material unconfirmed).
+  - `hidden-plastic` now allows natural rubber seals and gaskets. A plain "seal" is still flagged.
 
 ## Curated products (2026-10-31)
 - `data/curated_products.csv` is a hand-maintained list for products the open databases don't cover, mainly household goods. `pipeline/curated_products.py check | approve <id> | reject <id>` manages it.
