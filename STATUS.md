@@ -2,6 +2,21 @@
 
 _Last updated 2026-10-24._
 
+## Verified Amazon links (2026-10-31)
+- **Registry:** `data/amazon_links.csv` maps barcode to exact Amazon product ID (ASIN), with source (`manual` or `api`), date checked and a note.
+  - A product in it gets a single **"View on Amazon ✓"** button to `amazon.com/dp/<ASIN>?tag=cleanshelf01-20`.
+  - It starts empty.
+- **Adding a link:** open the product on Amazon, confirm it's the same product (same brand, name and size), copy the page URL, then run:
+  `python3 pipeline/amazon_links.py add <barcode> "<amazon URL>"`
+  - It pulls out the ASIN. Full product URLs only; `a.co` short links can't be read.
+  - `remove <barcode>` deletes a wrong link, and `list` shows them all.
+  - Then re-export and publish (step 7 of the rebuild).
+- **Later:** once the Associates account qualifies for Amazon's product API, a script can fill the registry by looking up each barcode, with `source=api`. The page logic doesn't change.
+- **Products not in the registry:**
+  - a barcode search, when they have a retail barcode;
+  - plus a name search, only when the name is specific: a brand plus at least 2 words beyond generic product types (`GENERIC_WORDS` in the page). Generated names never get one.
+  - Products with neither get no Amazon link (4 of 419), rather than a link to unrelated results.
+
 ## Design principle (owner, 2026-10-31): ingredients are as important as the name
 What makes this business stand out: **a product's ingredients (or materials) matter as much as its name.** Online, especially on Amazon, shoppers see a product's name and design many times before they find its ingredient list, which is often hard to find at all. This site does the opposite.
 

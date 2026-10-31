@@ -50,6 +50,13 @@ labels = {"gluten": "gluten", "soy": "soy", "peanut": "peanuts", "milk": "dairy"
           "plastic-like": "silicone, synthetic rubber, rayon or cellophane"}
 order = list(labels)
 bans = sorted(info["active_bans"].split(","), key=lambda s: order.index(s) if s in order else 99)
+# Verified Amazon product IDs (pipeline/amazon_links.py): products here link straight to their page.
+links_path = root / "data" / "amazon_links.csv"
+asins = {}
+if links_path.exists():
+    import csv
+    with open(links_path, newline="", encoding="utf-8") as f:
+        asins = {row["code"]: row["asin"] for row in csv.DictReader(f) if row.get("asin")}
 votes_path = root / "data" / "packaging_votes.json"
 votes = json.loads(votes_path.read_text(encoding="utf-8")) if votes_path.exists() else {}
 
@@ -63,6 +70,8 @@ for c, s, n, b, g, w, i, p, u, verdict, qty in db.execute(
              k="v" if verdict == "ok" else "u")
     if not r["n"]:  # no recorded name: build one, and mark it as built
         r["n"], r["nn"] = generated_name(b, g, qty), 1
+    if c in asins:
+        r["a"] = asins[c]
     if c in votes:
         r["q"] = votes[c]
     products.append({k: (v.replace("�", "") if isinstance(v, str) else v) for k, v in r.items()})
@@ -71,4 +80,4 @@ meta = {"bans": [labels.get(b, b) for b in bans], "checked": info["products_chec
 json.dump({"meta": meta, "products": products}, open(sys.argv[2], "w", encoding="utf-8"),
           ensure_ascii=False, separators=(",", ":"))
 print(len(products), "products,", sum(r["k"] == "v" for r in products), "with verified packaging,",
-      sum("q" in r for r in products), "with votes")
+      sum("q" in r for r in products), "with votes,", sum("a" in r for r in products), "with verified Amazon links")

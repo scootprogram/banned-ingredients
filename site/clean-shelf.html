@@ -251,22 +251,44 @@ details.about a { color: var(--accent); }
   const amazonSearch = (q) => "https://www.amazon.com/s?k=" + encodeURIComponent(q) +
     (AMAZON_TAG ? "&tag=" + encodeURIComponent(AMAZON_TAG) : "");
 
+  // Words that only say what kind of product it is: a search made of these finds thousands of
+  // unrelated items, so a name search needs more than this.
+  const GENERIC_WORDS = new Set(("toothpaste tooth paste soap soaps bar shampoo conditioner deodorant lotion cream " +
+    "creme oil oils balm butter body hand face facial lip wash gel serum mask scrub spray stick roll on natural " +
+    "organic product products unnamed vegan pure original classic new kids men women baby care daily the and with " +
+    "for of a mint fresh plus").split(" "));
+
   // Brand + name, kept short: long exact names find less than a few distinctive words.
   function nameQuery(r) {
     const words = [(r.b || "").split(",")[0].trim(), r.n || ""].join(" ").split(/\s+/).filter(Boolean);
     return words.slice(0, 10).join(" ") || r.c;
   }
 
+  // A name search is only worth offering when it can single the product out: a brand plus at
+  // least two words beyond generic product types. Never for names we generated ourselves.
+  function specificName(r) {
+    if (r.nn || !(r.b || "").trim()) return false;
+    const brand = new Set(fold(r.b).split(/[^\p{L}\p{N}]+/u));
+    const distinctive = fold(r.n).split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length > 1 && !GENERIC_WORDS.has(w) && !brand.has(w) && !/^\d+$/.test(w));
+    return distinctive.length >= 2;
+  }
+
   // A real retail barcode (UPC/EAN), not a store's in-house code (those start with 2).
   const retailBarcode = (c) => /^(\d{8}|\d{12,14})$/.test(c || "") && !/^0?2/.test(c);
   const link = (href, text) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(text)}</a>`;
+  const amazonProduct = (asin) => `https://www.amazon.com/dp/${encodeURIComponent(asin)}` +
+    (AMAZON_TAG ? "?tag=" + encodeURIComponent(AMAZON_TAG) : "");
 
-  // Every product here is sold in the US, and amazon.com listings carry the US barcode, so a
-  // barcode search often lands on the exact item. The name search is the fallback.
+  // 1. A verified product ID (data/amazon_links.csv): one exact link, nothing to guess.
+  // 2. Otherwise a barcode search (amazon.com listings carry the US barcode), plus a name search
+  //    only when the name is specific enough to find this product rather than any toothpaste.
   function amazonLinks(r) {
-    return retailBarcode(r.c)
-      ? link(amazonSearch(r.c), "Find on Amazon") + link(amazonSearch(nameQuery(r)), "Amazon by name")
-      : link(amazonSearch(nameQuery(r)), "Find on Amazon");
+    if (r.a) return link(amazonProduct(r.a), "View on Amazon ✓");
+    const out = [];
+    if (retailBarcode(r.c)) out.push(link(amazonSearch(r.c), "Find on Amazon"));
+    if (specificName(r)) out.push(link(amazonSearch(nameQuery(r)), out.length ? "Amazon by name" : "Find on Amazon"));
+    return out.join("");
   }
 
   const chips = (p) => [...new Set((p || "").split(/[;,]/)
