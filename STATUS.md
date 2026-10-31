@@ -2,6 +2,20 @@
 
 _Last updated 2026-10-24._
 
+## Design principle (owner, 2026-10-31): ingredients are as important as the name
+What makes this business stand out: **a product's ingredients (or materials) matter as much as its name.** Online, especially on Amazon, shoppers see a product's name and design many times before they find its ingredient list, which is often hard to find at all. This site does the opposite.
+
+Future layout work should follow this:
+- **Products with ingredients** (cosmetics, soaps, supplements…): the ingredient list is shown **the same size as the product title**, not as small print below it.
+- **Products made of a material** (glass water bottles, stainless steel food containers…): a big material label such as **GLASS** or **STAINLESS STEEL**, also the same size as the title.
+- So on each product card, the **title, the ingredient list and the material label are all the same size**.
+- Not built yet. Today the title is large and the ingredients are small text. Fold this into the planned redesign.
+
+Things to think through when building it:
+- Long ingredient lists (30+ items) at title size need a layout that stays readable, for example one line per ingredient or a clear column.
+- Material data: household items have materials in their "ingredients" field (`products` source and hygiene articles). Glass and stainless steel can come from the packaging/material taxonomy and the material aliases. Mixed materials get several labels (GLASS + STAINLESS STEEL).
+- Since plastic is never allowed, the material label also shows at a glance why the product qualifies.
+
 ## Done
 - **Ban list** (`banlist.db`) has 13 active entries:
   - 10 ingredients: gluten, soy, peanuts, milk, palm oil, HFCS, aspartame, Red 40, MSG, carrageenan
