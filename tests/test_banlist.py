@@ -78,6 +78,10 @@ CASES = [
     ("Jam", "glass jar, metal lid", None, "EXCLUDED"),                           # jar lids are still lined
     (None, "none", "glass jar, glass lid, natural rubber seal, stainless steel wire clamp", "OK"),
     ("Snack", "paper tray, heat seal", None, "EXCLUDED"),                       # a plain seal is still plastic
+    (None, "none", "oiled oak wood, tampico fiber bristles", "EXCLUDED"),        # owner rule: unnamed oil = soy
+    (None, "none", "cast iron, vegetable oil seasoning", "EXCLUDED"),
+    (None, "none", "oak wood finished with linseed oil", "OK"),                  # a named non-soy oil passes
+    (None, "none", "untreated beechwood handle, tampico fiber bristles", "OK"),
     (None, "none", "beechwood handle, nylon bristles", "EXCLUDED"),              # a known material doesn't hide plastic
     (None, "none", "stainless steel, silicone lid", "EXCLUDED"),
     ("Мыло", "бумага", "пластик", "EXCLUDED"),                                   # Russian "plastic"

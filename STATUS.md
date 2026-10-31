@@ -7,7 +7,13 @@ _Last updated 2026-10-24._
 - `cs-0018` Meliora laundry powder: baking soda, washing soda, sodium percarbonate, coconut/sunflower soap. The brand says the laundry line is plastic-free. Packaging is left unverified until the refill's tin-tie coating is confirmed.
 - New curated `type` = `cleaning`: household products judged by ingredients, browsed under a "Cleaning" group.
 - Skipped No Tox Life: retailer ingredient lists conflict, and customers report plastic-wrapped shipments.
-- **Open question for the owner:** does an unnamed oil on a wooden handle need to be confirmed soy-free? This affects Redecker and Bambu; Lodge's seasoning is the same question on cookware.
+- **Owner rule (2026-10-31): an unnamed wood or seasoning oil is treated as soy.**
+  - `soy` now applies to material text too. Material-only aliases count as soy: "oiled", "oil finish", "vegetable oil", "seasoned", "plant oil"…
+  - Named non-soy oils (linseed, tung, walnut, olive, coconut, sunflower, jojoba, mineral), beeswax, carnauba and "untreated" wood pass.
+  - Rejected under this rule: Lodge skillet, Bambu utensils, Redecker nail, baking and hand brushes. Re-check any of them if the maker names a non-soy oil.
+  - The live Redecker dish brush still passes: sources call its handle untreated beechwood.
+  - No live product was affected (487 before and after).
+- Meliora laundry powder (`cs-0018`) passes and is still pending the owner's approval.
 
 ## Browsing by material, and curated round 2 (2026-10-31)
 - **Two-layer browsing.**
