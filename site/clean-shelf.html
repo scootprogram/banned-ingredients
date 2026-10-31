@@ -41,7 +41,7 @@ body {
   font-family: var(--font-body); font-size: 16px; line-height: 1.5;
 }
 .wrap {
-  max-width: 880px; margin: 0 auto;
+  max-width: 1240px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: 32px 64px;
@@ -122,37 +122,51 @@ select {
 .seg.types:empty { display: none; }
 .count { font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
 
-#results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* Product grid: shop-style cards. The swatch at the top (where a shop shows a photo) carries
+   what the product is made of. */
+#results { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
 .item {
-  padding-block: 16px; border-bottom: 1px solid var(--line);
-  display: grid; grid-template-columns: 1fr auto; gap: 6px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  display: flex; flex-direction: column;
 }
 .item > * { min-width: 0; }
-.name { font-family: var(--font-display); font-size: 1.1875rem; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
-/* Design principle: what a product is made of is as important as its name, so material labels
-   are set at the same size as the title. */
-.materials { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-family: var(--font-display);
-  font-size: 1.1875rem; line-height: 1.25; letter-spacing: 0.04em; color: var(--accent); }
+.swatch {
+  position: relative; background: var(--kraft-bg); min-height: 132px; padding: 28px 16px 16px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+}
+.body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+/* Design principle: what a product is made of is as important as its name, so the material
+   label, the title and the ingredient list share one size. */
+.name, .materials, .ingredients, .swatch-type { font-size: 1.0625rem; line-height: 1.3; }
+.name { font-family: var(--font-display); margin: 0; overflow-wrap: anywhere; }
+.materials { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 8px; margin: 0;
+  font-family: var(--font-display); letter-spacing: 0.04em; color: var(--accent); }
 .materials span + span::before { content: "+ "; color: var(--muted); }
+.swatch-type { font-family: var(--font-display); color: var(--kraft); margin: 0; }
 .nn { font-family: var(--font-body); font-size: 0.75rem; color: var(--muted); font-weight: 400; white-space: nowrap; }
 .brand { color: var(--muted); font-size: 0.9375rem; overflow-wrap: anywhere; }
 .kind {
-  grid-column: 2; grid-row: 1; align-self: start;
+  position: absolute; top: 10px; left: 10px;
   font-family: var(--font-mono); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px;
+  color: var(--kraft); border: 1px solid color-mix(in srgb, var(--kraft) 40%, transparent); border-radius: 4px; padding: 1px 6px;
 }
-.meta { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip {
   font-size: 0.8125rem; padding: 1px 8px; border-radius: 4px;
   background: var(--kraft-bg); color: var(--kraft); overflow-wrap: anywhere;
 }
-.ingredients { font-size: 0.875rem; color: var(--muted); margin: 0; overflow-wrap: anywhere; }
-.ingredients b { color: var(--ink); font-weight: 700; }
+.ingredients { color: var(--ink); margin: 0; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+.ingredients { cursor: pointer; }
+.ingredients.open { -webkit-line-clamp: unset; display: block; }
+.ingredients b { font-weight: 700; color: var(--muted); font-family: var(--font-body); }
 .where { font-size: 0.8125rem; color: var(--muted); }
 .code { font-family: var(--font-mono); font-size: 0.75rem; }
-.links { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9375rem; }
-.links a { color: var(--accent); font-weight: 700; text-underline-offset: 3px; }
+.links { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 6px; font-size: 0.9375rem; }
+.links a { text-align: center; font-weight: 700; text-decoration: none; padding: 9px 14px; border-radius: 999px;
+  border: 1.5px solid var(--accent); color: var(--accent); }
+.links a:first-child { background: var(--accent); color: var(--accent-ink); }
 mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 2px; }
 
 .more {
@@ -362,17 +376,20 @@ details.about a { color: var(--accent); }
     const list = hits.slice(0, state.shown);
     $("results").innerHTML = list.length ? list.map((r) => `
       <li class="item">
-        <h2 class="name">${highlight(r.n, words)}${r.nn ? ` <span class="nn">name not recorded</span>` : ""}</h2>
-        <span class="kind">${esc(KIND_LABELS[r.s] || r.s)}</span>
-        <div class="brand">${highlight(r.b || "Unknown brand", words)}</div>
-        <div class="meta">
-          ${r.m && r.m.length ? `<p class="materials" aria-label="Made of">${r.m.map((x) => `<span>${esc(x)}</span>`).join("")}</p>` : ""}
+        <div class="swatch">
+          <span class="kind">${esc(KIND_LABELS[r.s] || r.s)}</span>
+          ${r.m && r.m.length ? `<p class="materials" aria-label="Made of">${r.m.map((x) => `<span>${esc(x)}</span>`).join("")}</p>`
+                              : `<p class="swatch-type">${esc(r.t || "")}</p>`}
+        </div>
+        <div class="body">
+          <h2 class="name">${highlight(r.n, words)}${r.nn ? ` <span class="nn">name not recorded</span>` : ""}</h2>
+          <div class="brand">${highlight(r.b || "Unknown brand", words)}</div>
+          ${r.i ? `<p class="ingredients"><b>${r.s === "products" ? "Made of" : "Ingredients"}:</b> ${highlight(r.i, words)}</p>` : ""}
           ${r.k === "v" ? `<span class="status ok">Packaging verified plastic-free</span>`
                         : `<span class="status unknown">Packaging not verified yet</span>`}
           ${r.p ? `<div class="chips" aria-label="Packaging recorded">${chips(r.p)}</div>` : ""}
           ${votesLine(r.q)}
-          ${r.i ? `<p class="ingredients"><b>${r.s === "products" ? "Made of" : "Ingredients"}:</b> ${highlight(r.i, words)}</p>` : ""}
-          <div class="where">${r.w ? "Sold in " + esc(r.w.split(",").slice(0, 4).join(", ")) + (r.w.split(",").length > 4 ? "…" : "") + " · " : ""}<span class="code">${esc(r.c)}</span></div>
+          <div class="where"><span class="code">${esc(r.c)}</span></div>
           <div class="links">
             ${amazonLinks(r)}
             ${r.u ? `<a href="${esc(r.u)}" target="_blank" rel="noopener">${r.cu ? "Maker's page" : "Full record"}</a>` : ""}
@@ -439,6 +456,8 @@ details.about a { color: var(--accent); }
   }
 
   $("results").addEventListener("click", (e) => {
+    const ing = e.target.closest(".ingredients");
+    if (ing && !e.target.closest("a")) { ing.classList.toggle("open"); return; }
     const b = e.target.closest("button[data-help]");
     if (!b) return;
     const open = b.getAttribute("aria-expanded") === "true";
