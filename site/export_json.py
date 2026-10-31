@@ -94,7 +94,7 @@ MATERIAL_GROUPS = {"STAINLESS STEEL": "Stainless steel & metal", "STEEL": "Stain
                    "COPPER": "Stainless steel & metal", "BRASS": "Stainless steel & metal", "TIN": "Stainless steel & metal",
                    "WOOD": "Wood & bamboo", "BAMBOO": "Wood & bamboo", "CORK": "Wood & bamboo",
                    "COTTON": "Cotton & linen", "LINEN": "Cotton & linen", "HEMP": "Cotton & linen", "SILK": "Cotton & linen",
-                   "GLASS": "Glass", "WOOL": "Wool",
+                   "GLASS": "Glass", "WOOL": "Wool", "PAPER": "Paper",
                    "PLANT FIBER": "Natural fibers", "SISAL": "Natural fibers", "JUTE": "Natural fibers",
                    "COCONUT FIBER": "Natural fibers", "LOOFAH": "Natural fibers", "HORSEHAIR": "Natural fibers",
                    "CERAMIC": "Ceramic & stone", "PORCELAIN": "Ceramic & stone", "STONEWARE": "Ceramic & stone",
