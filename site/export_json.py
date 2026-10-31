@@ -74,7 +74,7 @@ MATERIAL_LABELS = [("stainless steel", "STAINLESS STEEL"), ("cast iron", "CAST I
                    ("beech", "WOOD"), ("cotton", "COTTON"), ("linen", "LINEN"), ("hemp", "HEMP"), ("wool", "WOOL"),
                    ("sisal", "SISAL"), ("jute", "JUTE"), ("coconut fiber", "COCONUT FIBER"), ("coir", "COCONUT FIBER"),
                    ("tampico", "PLANT FIBER"), ("horsehair", "HORSEHAIR"), ("loofah", "LOOFAH"), ("cork", "CORK"),
-                   ("paper", "PAPER"), ("beeswax", "BEESWAX"), ("stone", "STONE"), ("silk", "SILK")]
+                   ("paper", "PAPER"), ("bagasse", "SUGARCANE FIBER"), ("sugarcane", "SUGARCANE FIBER"), ("boar", "BOAR BRISTLE"), ("palm fiber", "PALM FIBER"), ("beeswax", "BEESWAX"), ("stone", "STONE"), ("silk", "SILK")]
 
 
 def material_labels(materials):
@@ -96,7 +96,7 @@ MATERIAL_GROUPS = {"STAINLESS STEEL": "Stainless steel & metal", "STEEL": "Stain
                    "COTTON": "Cotton & linen", "LINEN": "Cotton & linen", "HEMP": "Cotton & linen", "SILK": "Cotton & linen",
                    "GLASS": "Glass", "WOOL": "Wool", "PAPER": "Paper",
                    "PLANT FIBER": "Natural fibers", "SISAL": "Natural fibers", "JUTE": "Natural fibers",
-                   "COCONUT FIBER": "Natural fibers", "LOOFAH": "Natural fibers", "HORSEHAIR": "Natural fibers",
+                   "COCONUT FIBER": "Natural fibers", "SUGARCANE FIBER": "Natural fibers", "BOAR BRISTLE": "Natural fibers", "PALM FIBER": "Natural fibers", "LOOFAH": "Natural fibers", "HORSEHAIR": "Natural fibers",
                    "CERAMIC": "Ceramic & stone", "PORCELAIN": "Ceramic & stone", "STONEWARE": "Ceramic & stone",
                    "STONE": "Ceramic & stone"}
 
