@@ -131,6 +131,8 @@ select {
   position: relative; background: var(--box); color: var(--box-ink); min-height: 132px; padding: 28px 16px 16px;
   display: flex; align-items: center; justify-content: center; text-align: center;
 }
+.swatch { flex-direction: column; gap: 10px; }
+.photo { width: 100%; height: 170px; object-fit: contain; mix-blend-mode: multiply; display: block; }
 .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 /* Design principle: what a product is made of is as important as its name, so the material
    label, the title and the ingredient list share one size. */
@@ -221,6 +223,7 @@ details.about a { color: var(--accent); }
     </ul>
     <p><b>Packaging not verified yet</b> means the product itself is clean, but its packaging hasn't been recorded fully enough to say. If you know a product's packaging, use its Help button. For each question, the most common answer from visitors is shown and the rest are set aside.</p>
     <p>The list depends on what volunteers recorded, so check the label before you buy.</p>
+    <p>Product photos come from Amazon, or from the volunteers of <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> and <a href="https://world.openproductsfacts.org" target="_blank" rel="noopener">Open Products Facts</a> under the <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC BY-SA 3.0</a> license.</p>
     <p id="built"></p>
     <p>Product data © Open Beauty Facts and Open Products Facts contributors, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>.</p>
   </details>
@@ -306,6 +309,12 @@ details.about a { color: var(--accent); }
   // 1. A verified product ID (data/amazon_links.csv): one exact link, nothing to guess.
   // 2. Otherwise a barcode search (amazon.com listings carry the US barcode), plus a name search
   //    only when the name is specific enough to find this product rather than any toothpaste.
+  // Product photo: Amazon's own affiliate image link for products with a verified Amazon ID,
+  // else the front photo from Open Beauty/Products Facts (CC BY-SA).
+  const photoOf = (r) => r.a
+    ? `https://ws-na.amazon-adsystem.com/widgets/q?_encoding=UTF8&ASIN=${encodeURIComponent(r.a)}&Format=_SL250_&ID=AsinImage&MarketPlace=US&ServiceVersion=20070822&WS=1&tag=${AMAZON_TAG}`
+    : (r.img || "");
+
   function amazonLinks(r) {
     if (r.na) return "";  // not sold on Amazon: the maker's page is the only link
     if (r.a) return link(amazonProduct(r.a), "View on Amazon ✓");
@@ -374,6 +383,7 @@ details.about a { color: var(--accent); }
       <li class="item">
         <div class="swatch">
           <span class="kind">${esc(KIND_LABELS[r.s] || r.s)}</span>
+          ${photoOf(r) ? `<img class="photo" src="${esc(photoOf(r))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
           ${r.m && r.m.length ? `<p class="materials" aria-label="Made of">${r.m.map((x) => `<span>${esc(x)}</span>`).join("")}</p>`
                               : `<p class="swatch-type">${esc(r.t || "")}</p>`}
         </div>

@@ -127,6 +127,26 @@ def beauty_type(categories, name):
 votes_path = root / "data" / "packaging_votes.json"
 votes = json.loads(votes_path.read_text(encoding="utf-8")) if votes_path.exists() else {}
 
+# Front photos from Open Beauty/Products Facts (CC BY-SA; credited on the page).
+def load_photos(codes):
+    import csv as _csv, gzip
+    _csv.field_size_limit(10**9)
+    photos = {}
+    for name in ("en.openbeautyfacts.org.products.csv.gz", "en.openproductsfacts.org.products.csv.gz"):
+        path = root / "data" / "raw" / name
+        if not path.exists():
+            continue
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            for row in _csv.DictReader(f, delimiter="\t"):
+                url = row.get("image_url") or ""
+                if row["code"] in codes and url.startswith("https://images.open"):
+                    photos[row["code"]] = url
+    return photos
+
+
+us_codes = {c for (c,) in db.execute("SELECT code FROM products WHERE ',' || countries || ',' LIKE '%,United States,%'")}
+photos = load_photos(us_codes)
+
 cut = lambda s, n: (s or "")[:n] + ("…" if s and len(s) > n else "")
 products = []
 for c, s, n, b, g, w, i, p, u, verdict, qty in db.execute(
@@ -153,6 +173,8 @@ for c, s, n, b, g, w, i, p, u, verdict, qty in db.execute(
         r["t"] = "Other household"
     if c in asins:
         r["a"] = asins[c]
+    if c in photos:
+        r["img"] = photos[c]
     if c in votes:
         r["q"] = votes[c]
     products.append({k: (v.replace("�", "") if isinstance(v, str) else v) for k, v in r.items()})
@@ -161,4 +183,5 @@ meta = {"bans": [labels.get(b, b) for b in bans], "checked": info["products_chec
 json.dump({"meta": meta, "products": products}, open(sys.argv[2], "w", encoding="utf-8"),
           ensure_ascii=False, separators=(",", ":"))
 print(len(products), "products,", sum(r["k"] == "v" for r in products), "with verified packaging,",
-      sum("q" in r for r in products), "with votes,", sum("a" in r for r in products), "with verified Amazon links")
+      sum("q" in r for r in products), "with votes,", sum("a" in r for r in products), "with verified Amazon links,",
+      sum("img" in r for r in products), "with photos")
